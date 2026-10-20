@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin sign in — BloxBazaar BD</title>
+  <meta name="description" content="Admin sign-in screen (design stage) for managing BloxBazaar BD products and availability.">
+  <link rel="icon" href="assets/img/website%20logo/favicon_navy_gold.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/tailwind.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/screens.css">
+  <link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body>
+  <main class="login-page" id="main">
+    <div class="login-card">
+      <div class="login-head">
+        <a class="wordmark" href="index.html"><img src="assets/img/website%20logo/logo_stacked.svg" alt="BloxBazaar BD"></a>
+        <h1 class="login-title" data-i18n="admin.loginTitle">Admin sign in</h1>
+        <p class="login-sub" data-i18n="admin.loginSub">Sign in to manage products and availability.</p>
+      </div>
+
+      <div class="login-error" id="login-error" role="alert">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+        <span data-i18n="admin.demoError">Incorrect email or password. Please try again.</span>
+      </div>
+
+      <form id="login-form" novalidate>
+        <div class="field" id="f-email">
+          <label class="field-label" for="login-email" data-i18n="admin.email">Email</label>
+          <input class="input" id="login-email" type="email" autocomplete="email" spellcheck="false">
+          <p class="field-error" data-i18n="admin.invalidEmail">Enter a valid email address.</p>
+        </div>
+
+        <div class="field" id="f-password">
+          <label class="field-label" for="login-password" data-i18n="admin.password">Password</label>
+          <div class="pw-wrap">
+            <input class="input" id="login-password" type="password" autocomplete="current-password">
+            <button class="pw-toggle" id="pw-toggle" type="button" aria-label="Show password" aria-pressed="false" data-i18n-aria="admin.showPassword">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.8"/></svg>
+            </button>
+          </div>
+          <p class="field-error" data-i18n="admin.passwordRequired">Enter your password.</p>
+        </div>
+
+        <label class="check-row">
+          <input type="checkbox" id="login-remember">
+          <span data-i18n="admin.remember">Keep me signed in on this device</span>
+        </label>
+
+        <button class="btn btn-primary btn-block" type="submit" data-i18n="admin.signIn">Sign in</button>
+      </form>
+
+      <div class="login-note">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5m0-3h.01"/></svg>
+        <span data-i18n="admin.loginNote">Private area for the shop owner or maintainer. Never share this password with anyone.</span>
+      </div>
+
+      <p class="login-forgot" data-i18n="admin.forgot">Lost the password? Ask the site developer to reset it in config.js.</p>
+
+      <p class="login-back"><a href="index.html" data-i18n="admin.backToSite">Back to storefront</a></p>
+    </div>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/i18n.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/site.js"></script>
+  <script src="assets/js/admin-login.js"></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+/* =========================================================
+   BloxBazaar BD — Tailwind source (build with `npm run build:css`)
+   Output: assets/css/tailwind.css (committed, no runtime dependency)
+   ========================================================= */
+
+@import "tailwindcss";
+
+/* Content sources to scan for utility classes */
+@source "../../*.html";
+@source "../../assets/js/*.js";
+
+/* Design tokens — shared with base.css / screens.css / admin.css.
+   (PRD §5: one deep forest-green accent, warm off-white canvas,
+   WhatsApp treatment reserved for WhatsApp actions.) */
+@theme {
+  /* Colors */
+  --color-canvas: #F6F8F5;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #EEF2ED;
+  --color-surface-3: #E6EBE4;
+  --color-line: #E2E7E0;
+  --color-line-strong: #CDD5CC;
+
+  --color-ink: #212823;
+  --color-ink-2: #5C675E;
+  --color-ink-3: #6B766D;
+
+  --color-accent: #1F5B3F;
+  --color-accent-strong: #17492F;
+  --color-accent-soft: #E7F0E9;
+  --color-accent-border: #C6DBCB;
+
+  --color-wa: #25D366;
+  --color-wa-strong: #1DA851;
+  --color-wa-ink: #0C3B22;
+
+  --color-warn: #7A5A14;
+  --color-warn-soft: #F6EFDD;
+  --color-warn-border: #E7D9B4;
+
+  --color-danger: #8A2B2B;
+  --color-danger-soft: #F7EAE8;
+  --color-danger-border: #E5C6C2;
+
+  /* Type — one clean sans-serif family (+ Bangla fallback) */
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue",
+    Arial, "Noto Sans Bengali", "Nirmala UI", sans-serif;
+
+  /* Shape — modest rounding */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Depth — very light shadows only */
+  --shadow-sm: 0 1px 2px rgba(23, 33, 26, 0.05);
+  --shadow-md: 0 6px 24px rgba(23, 33, 26, 0.08);
+}

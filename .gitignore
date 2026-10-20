@@ -1,0 +1,5 @@
+node_modules/
+
+# Local backend data: SQLite database, WAL files, uploaded images, .env
+server/data/
+server/.env

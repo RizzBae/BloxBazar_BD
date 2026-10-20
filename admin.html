@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en" class="needs-auth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin — BloxBazaar BD</title>
+  <meta name="description" content="Admin dashboard for managing BloxBazaar BD product listings, stock, eligibility review state, and shop settings.">
+  <script src="assets/js/admin-gate.js"></script>
+  <link rel="icon" href="assets/img/website%20logo/favicon_navy_gold.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/tailwind.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/screens.css">
+  <link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body>
+  <header class="admin-topbar">
+    <div class="container container-wide at-inner">
+      <div class="at-brand">
+        <a class="wordmark" href="admin.html"><img src="assets/img/website%20logo/mark_only.svg" alt="BloxBazaar BD"></a>
+        <span class="at-chip">Admin</span>
+      </div>
+      <div class="at-actions">
+        <a class="btn btn-ghost btn-sm" href="index.html" data-i18n="cta.viewStorefront">View storefront</a>
+        <button class="btn btn-ghost btn-sm" id="btn-reset" type="button" data-i18n="admin.reset">Reset demo data</button>
+        <span class="at-sep" aria-hidden="true"></span>
+        <span class="at-user">
+          <span class="at-avatar" aria-hidden="true">A</span>
+          <span data-i18n="admin.placeholderUser">Owner</span>
+        </span>
+        <button class="btn btn-secondary btn-sm" id="btn-signout" type="button" data-i18n="admin.signOut">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin-main" id="main">
+    <div class="container container-wide">
+
+      <div class="save-banner" id="save-banner" role="status">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>
+        <span data-i18n="admin.saveBanner">Saved. The storefront shows this change in this browser.</span>
+      </div>
+
+      <div class="admin-page-head">
+        <div>
+          <h1 class="aph-title" data-i18n="admin.dashboardTitle">Products</h1>
+          <p class="aph-sub" data-i18n="admin.dashboardSub">Manage listings, availability, and eligibility review state.</p>
+        </div>
+        <button class="btn btn-primary" id="btn-add" type="button">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14m-7-7h14"/></svg>
+          <span data-i18n="admin.addProduct">Add product</span>
+        </button>
+      </div>
+
+      <div class="admin-tabs" role="tablist" aria-label="Admin sections">
+        <button class="admin-tab is-active" id="tab-products" type="button" role="tab" aria-selected="true" aria-controls="panel-products" data-tab="products" data-i18n="admin.tabProducts">Products</button>
+        <button class="admin-tab" id="tab-settings" type="button" role="tab" aria-selected="false" aria-controls="panel-settings" data-tab="settings" data-i18n="admin.tabSettings">Shop settings</button>
+      </div>
+
+      <div id="panel-products" role="tabpanel" aria-labelledby="tab-products">
+
+      <div class="admin-toolbar">
+        <div>
+          <label class="visually-hidden" for="admin-q" data-i18n="admin.searchPlaceholder">Search products</label>
+          <div class="input-wrap at-search">
+            <svg class="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+            <input class="input with-icon" id="admin-q" type="search" data-i18n-ph="admin.searchPlaceholder" autocomplete="off">
+          </div>
+        </div>
+        <div class="chip-scroll">
+          <div class="chip-row" id="admin-chips" role="group" aria-label="Filter products"></div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-scroll">
+          <table class="admin-table" id="admin-table">
+            <thead>
+              <tr>
+                <th data-i18n="admin.colProduct">Product</th>
+                <th data-i18n="admin.colCategory">Category</th>
+                <th data-i18n="admin.colPrice">Price (BDT)</th>
+                <th data-i18n="admin.colStock">Stock state</th>
+                <th data-i18n="admin.colPublication">Publication</th>
+                <th data-i18n="admin.colEligibility">Eligibility</th>
+                <th data-i18n="admin.colUpdated">Updated</th>
+                <th data-i18n="admin.colActions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-tbody"></tbody>
+          </table>
+        </div>
+        <div id="admin-empty"></div>
+      </div>
+
+      </div><!-- /panel-products -->
+
+      <!-- Shop settings: WhatsApp number + order-message templates.
+           Edits are saved server-side in backend mode and to this
+           browser's localStorage in the static demo. -->
+      <section id="panel-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+        <div class="settings-panel">
+          <div class="settings-card">
+            <p class="settings-desc" data-i18n="admin.settingsDesc">These values power every WhatsApp button on the storefront.</p>
+
+            <div class="field" id="f-settings-number">
+              <label class="field-label" for="s-wa-number" data-i18n="admin.settingsNumberLabel">WhatsApp number</label>
+              <input class="input" id="s-wa-number" type="text" inputmode="tel" autocomplete="off" placeholder="8801XXXXXXXXX" maxlength="20">
+              <p class="field-hint" data-i18n="admin.settingsNumberHint">International format, digits only — e.g. 8801XXXXXXXXX. While empty, WhatsApp opens without a recipient.</p>
+              <p class="field-error" data-i18n="admin.settingsErrNumber">Use the international format without a plus, e.g. 8801XXXXXXXXX.</p>
+            </div>
+
+            <div class="field" id="f-settings-tpl-product">
+              <label class="field-label" for="s-tpl-product" data-i18n="admin.settingsTplProductLabel">Order message — standard products</label>
+              <textarea class="textarea" id="s-tpl-product" rows="5" maxlength="1000" data-i18n-ph="admin.settingsTplProductPh"></textarea>
+              <p class="field-hint" data-i18n="admin.settingsTplProductHint">Leave empty to use the built-in English and Bangla message.</p>
+            </div>
+
+            <div class="field" id="f-settings-tpl-robux">
+              <label class="field-label" for="s-tpl-robux" data-i18n="admin.settingsTplRobuxLabel">Order message — Robux (custom amount)</label>
+              <textarea class="textarea" id="s-tpl-robux" rows="5" maxlength="1000" data-i18n-ph="admin.settingsTplRobuxPh"></textarea>
+              <p class="field-hint" data-i18n="admin.settingsTplRobuxHint">Leave empty to use the built-in English and Bangla message.</p>
+            </div>
+
+            <div class="settings-foot">
+              <button class="btn btn-primary" id="btn-save-settings" type="button" data-i18n="admin.settingsSave">Save settings</button>
+              <p class="field-hint" id="settings-mode-note"></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Confirm modal -->
+  <div class="modal-backdrop" id="modal-backdrop" hidden>
+    <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-body">
+      <h2 class="modal-title" id="modal-title"></h2>
+      <p class="modal-body" id="modal-body"></p>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" id="modal-cancel" type="button" data-i18n="admin.cancel">Cancel</button>
+        <button class="btn btn-danger" id="modal-confirm" type="button"></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+
+  <!-- Add / edit drawer -->
+  <aside class="drawer" id="drawer" hidden role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+    <div class="drawer-head">
+      <h2 class="drawer-title" id="drawer-title">Add product</h2>
+      <button class="icon-btn" id="drawer-close" type="button" aria-label="Close" data-i18n-aria="admin.close">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="drawer-body">
+      <div class="field">
+        <span class="field-label" data-i18n="admin.fieldImage">Image</span>
+        <div class="dropzone">
+          <div class="dz-thumb">
+            <svg class="icon icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-4.5-4.5L7 21"/></svg>
+          </div>
+          <div>
+            <div class="dz-title" data-i18n="admin.dzTitle">Add a product image</div>
+            <div class="dz-note" data-i18n="admin.dzNote">Placeholder only — uploads are handled in the backend stage.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="field" id="f-name">
+          <label class="field-label" for="d-name" data-i18n="admin.fieldName">Name</label>
+          <input class="input" id="d-name" type="text">
+          <p class="field-error" data-i18n="admin.errRequired">This field is required.</p>
+        </div>
+        <div class="field">
+          <span class="field-label" data-i18n="admin.fieldSku">SKU</span>
+          <div class="sku-readonly" id="d-sku">BB-…</div>
+          <p class="field-hint" data-i18n="admin.skuNote">Generated automatically from the category and price.</p>
+        </div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="field" id="f-category">
+          <label class="field-label" for="d-category" data-i18n="admin.fieldCategory">Category</label>
+          <select class="select" id="d-category"></select>
+          <p class="field-error" data-i18n="admin.errRequired">This field is required.</p>
+        </div>
+        <div class="field" id="f-price">
+          <label class="field-label" for="d-price" data-i18n="admin.fieldPrice">Price</label>
+          <div class="input-wrap">
+            <span class="input-prefix">BDT</span>
+            <input class="input" id="d-price" type="number" min="0" step="1" inputmode="numeric">
+          </div>
+          <p class="field-error" data-i18n="admin.errPrice">Enter a price above 0.</p>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field-label" data-i18n="admin.fieldStock">Stock state</span>
+        <div class="segmented segmented-block" id="d-stock" role="radiogroup" aria-label="Stock state">
+          <button class="segmented-btn" type="button" data-value="in" role="radio" aria-checked="true"><span data-i18n="admin.stockIn">In stock</span></button>
+          <button class="segmented-btn" type="button" data-value="out" role="radio" aria-checked="false"><span data-i18n="admin.stockOut">Out of stock</span></button>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field-label" data-i18n="admin.fieldPublication">Publication state</span>
+        <div class="segmented segmented-block" id="d-publication" role="radiogroup" aria-label="Publication state">
+          <button class="segmented-btn" type="button" data-value="draft" role="radio" aria-checked="true"><span data-i18n="admin.pubDraft">Draft</span></button>
+          <button class="segmented-btn" type="button" data-value="published" role="radio" aria-checked="false"><span data-i18n="admin.pubPublished">Published</span></button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="d-eligibility" data-i18n="admin.fieldEligibility">Eligibility review state</label>
+        <select class="select" id="d-eligibility">
+          <option value="approved" data-i18n="admin.eligApproved">Approved for external sale</option>
+          <option value="review" data-i18n="admin.eligReview">Needs review</option>
+          <option value="informational" data-i18n="admin.eligInfo">Not for sale</option>
+        </select>
+        <p class="field-hint" data-i18n="admin.eligibilityNote">Draft and archived items stay hidden from the shop. Only approved listings can be published to the marketplace.</p>
+      </div>
+
+      <div class="field" id="f-description">
+        <label class="field-label" for="d-description" data-i18n="admin.fieldDescription">Description</label>
+        <textarea class="textarea" id="d-description"></textarea>
+        <p class="field-error" data-i18n="admin.errRequired">This field is required.</p>
+      </div>
+    </div>
+
+    <div class="drawer-foot">
+      <button class="btn btn-ghost" id="drawer-cancel" type="button" data-i18n="admin.cancel">Cancel</button>
+      <button class="btn btn-primary" id="drawer-save" type="button" data-i18n="admin.saveProduct">Save product</button>
+    </div>
+  </aside>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/i18n.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/site.js"></script>
+  <script src="assets/js/admin.js"></script>
+</body>
+</html>

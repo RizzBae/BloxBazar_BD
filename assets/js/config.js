@@ -1,0 +1,982 @@
+/* =========================================================
+   BloxBazaar BD — config.js
+   Site configuration + PLACEHOLDER catalogue data.
+
+   ⚠ All products, prices, discount prices, and dates below are
+   realistic placeholders for design review. The shop owner must
+   confirm every price and delivery method before launch.
+   The WhatsApp number + order-message templates ship empty on
+   purpose — the owner sets them in the admin panel (Shop settings)
+   or here. Never invent them.
+   ========================================================= */
+
+window.BB_DATA = {
+  brand: "BloxBazaar BD",
+
+  /* Bump this when you change the catalogue below — it invalidates
+     any locally saved admin changes so fresh data wins. */
+  dataVersion: 3,
+
+  /* Custom Robux amount rules (used by the Robux picker + WhatsApp
+     estimate). Edit freely: min / max / defaultAmount / presets,
+     and rate tiers (BDT per Robux; the first tier whose "from"
+     the amount reaches wins). */
+  robuxRules: {
+    min: 10,
+    max: 100000,
+    defaultAmount: 100,
+    presets: [40, 80, 100, 150, 200, 300, 400, 800, 1000, 2000, 5000, 10000, 25000, 50000, 100000],
+    tiers: [
+      { from: 5000, rate: 0.98 },
+      { from: 800, rate: 1.0 },
+      { from: 400, rate: 1.15 },
+      { from: 100, rate: 1.2 },
+      { from: 0, rate: 1.3 }
+    ]
+  },
+
+  /* PLACEHOLDER — set the shop's WhatsApp number, digits only,
+     country code first, e.g. "8801XXXXXXXXX".
+     While empty, WhatsApp opens without a recipient so the
+     pre-filled message flow can still be reviewed.
+     In backend (API) mode the owner edits this in the admin panel
+     (Shop settings); the value here is only the static-demo default. */
+  whatsappNumber: "",
+
+  /* Optional custom WhatsApp order-message templates (admin panel →
+     Shop settings). Empty = use the built-in English/Bangla messages
+     in i18n.js (`wa.order` / `wa.orderRobux`).
+     Placeholders — product: {brand} {name} {sku} {qty} {price}
+     {robloxId} {robloxIdLine} {url}; Robux orders: {brand} {name}
+     {amount} {price} {robloxId} {robloxIdLine} {url}. */
+  whatsappTemplates: {
+    product: "",
+    robux: ""
+  },
+
+  /* Owner-only admin access (design-stage gate).
+     passwordHash is the SHA-256 of the admin password. The demo
+     password is:  BloxBazaar@2026
+     Change it before going live — run this and paste the result:
+       node -e "console.log(require('crypto').createHash('sha256').update('YOUR-NEW-PASSWORD').digest('hex'))"
+     Note: on a static site this gate hides the admin tools but is
+     not real security — a live deployment must enforce auth on the
+     server (README → Admin panel behaviour, PRD §11). */
+  admin: {
+    passwordHash: "4f9af0c613f1a56c7aa1d88dedccd3f3b24298a891684b7d5be371c782f05636",
+    sessionHours: 12
+  },
+
+  placeholders: {
+    whatsappNumber: "[WhatsApp number to be added]",
+    supportEmail: "[Support email to be added]",
+    supportHours: "[Support hours to be added]"
+  },
+
+  categories: [
+    { id: "robux", en: "Robux", bn: "রোবাক্স", image: "assets/img/products/robux.jpg" },
+    { id: "blox-fruits", en: "Blox Fruits", bn: "Blox Fruits", image: "assets/img/products/blox-fruits.jpg" },
+    { id: "mm2", en: "MM2", bn: "MM2", image: "assets/img/products/mm2.jpg" },
+    { id: "rivals", en: "Rivals", bn: "Rivals", image: "assets/img/products/rivals.jpg" },
+    { id: "steal-a-brainrot", en: "Steal a Brainrot", bn: "Steal a Brainrot", image: "assets/img/products/steal-a-brainrot.jpg" }
+  ],
+
+  /* Catalogue items.
+     stock: "in" | "out" — publication: "published" | "draft" | "archived"
+     eligibility: "approved" | "review" | "informational"
+     listPrice (optional): original price shown struck through;
+     tag (optional): small chip on the product image.  */
+  products: [
+    {
+      id: "robux-custom",
+      sku: "BB-RB-AMT",
+      name: { en: "Robux — any amount", bn: "রোবাক্স — যেকোনো পরিমাণ" },
+      category: "robux",
+      price: 13,
+      priceFrom: true,
+      robuxAmount: 100,
+      tag: { en: "Any amount", bn: "যেকোনো পরিমাণ" },
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: true,
+      tone: "green",
+      monogram: "RBX",
+      image: "assets/img/products/robux.jpg",
+      updated: "2026-10-17",
+      short: {
+        en: "Choose any amount from 10 to 100,000 Robux — the total is confirmed on WhatsApp.",
+        bn: "10 থেকে 100,000 — যেকোনো পরিমাণ রোবাক্স বেছে নিন; সর্বমোট WhatsApp-এ নিশ্চিত হয়।"
+      },
+      description: {
+        en: "Pick a preset like 40, 80, 100, or 150, or type any amount from 10 up to 100,000 Robux. Smaller amounts cost a little more per Robux; bigger amounts get the best rate. The estimated price updates as you choose, and the admin confirms the final total in chat before anything is paid.",
+        bn: "40, 80, 100 বা 150-এর মতো প্রিসেট বেছে নিন, অথবা 10 থেকে 100,000 পর্যন্ত যেকোনো পরিমাণ লিখুন। ছোট অঙ্কে প্রতি রোবাক্সের দাম সামান্য বেশি; বড় অঙ্কে সেরা রেট। বেছে নেওয়ার সাথে সাথে আনুমানিক দাম আপডেট হয়, আর পেমেন্টের আগে অ্যাডমিন চ্যাটে চূড়ান্ত সর্বমোট নিশ্চিত করেন।"
+      },
+      includes: [
+        { en: "Any amount from 10 to 100,000 Robux", bn: "10 থেকে 100,000 পর্যন্ত যেকোনো পরিমাণ" },
+        { en: "No password needed — just your Roblox username", bn: "পাসওয়ার্ড লাগবে না — শুধু আপনার Roblox ইউজারনেম" },
+        { en: "Final total confirmed in chat before payment", bn: "পেমেন্টের আগে চ্যাটে চূড়ান্ত সর্বমোট নিশ্চিত" }
+      ]
+    },
+    {
+      id: "robux-200",
+      sku: "BB-RB-200",
+      name: { en: "Robux 200", bn: "রোবাক্স 200" },
+      category: "robux",
+      robuxAmount: 200,
+      price: 240,
+      listPrice: 280,
+      tag: { en: "Budget pick", bn: "বাজেট পিক" },
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "green",
+      monogram: "RBX",
+      image: "assets/img/products/robux.jpg",
+      updated: "2026-10-17",
+      short: {
+        en: "200 Robux — the smallest quick top-up.",
+        bn: "200 রোবাক্স — সবচেয়ে ছোট দ্রুত টপ-আপ।"
+      },
+      description: {
+        en: "Perfect for a small avatar item or a quick gamepass. Delivered via Roblox group payout or a gamepass purchase — you only share your username, never your password.",
+        bn: "ছোট অ্যাভাটার আইটেম বা দ্রুত একটি গেমপাসের জন্য একদম ঠিক। ডেলিভারি হয় Roblox গ্রুপ পেআউট বা গেমপাস কেনার মাধ্যমে — শুধু ইউজারনেম দিলেই হয়, পাসওয়ার্ড কখনো নয়।"
+      },
+      includes: [
+        { en: "No password needed — just your Roblox username", bn: "পাসওয়ার্ড লাগবে না — শুধু আপনার Roblox ইউজারনেম" },
+        { en: "Great for small in-game purchases", bn: "ছোট ইন-গেম কেনাকাটার জন্য দারুণ" },
+        { en: "Each order confirmed in chat before payment", bn: "পেমেন্টের আগে প্রতিটি অর্ডার চ্যাটে নিশ্চিত করা হয়" }
+      ]
+    },
+    {
+      id: "robux-400",
+      sku: "BB-RB-400",
+      name: { en: "Robux 400", bn: "রোবাক্স 400" },
+      category: "robux",
+      robuxAmount: 400,
+      price: 460,
+      listPrice: 540,
+      tag: { en: "Starter pick", bn: "স্টার্টার পিক" },
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "green",
+      monogram: "RBX",
+      image: "assets/img/products/robux.jpg",
+      updated: "2026-10-17",
+      short: {
+        en: "400 Robux — our most-bought starter pack.",
+        bn: "400 রোবাক্স — সবচেয়ে বেশি কেনা স্টার্টার প্যাক।"
+      },
+      description: {
+        en: "The pack most first-time buyers pick: enough for a gamepass or a few avatar items. Delivered via group payout or gamepass — no password, just your username.",
+        bn: "যারা প্রথমবার কেনেন, বেশিরভাগই এই প্যাকটি নেন: একটি গেমপাস বা কয়েকটি অ্যাভাটার আইটেমের জন্য যথেষ্ট। গ্রুপ পেআউট বা গেমপাসে ডেলিভারি — পাসওয়ার্ড নয়, শুধু ইউজারনেম।"
+      },
+      includes: [
+        { en: "No password needed — just your Roblox username", bn: "পাসওয়ার্ড লাগবে না — শুধু আপনার Roblox ইউজারনেম" },
+        { en: "Most popular starter size", bn: "সবচেয়ে জনপ্রিয় স্টার্টার প্যাক" },
+        { en: "Each order confirmed in chat before payment", bn: "পেমেন্টের আগে প্রতিটি অর্ডার চ্যাটে নিশ্চিত করা হয়" }
+      ]
+    },
+    {
+      id: "robux-800",
+      sku: "BB-RB-800",
+      name: { en: "Robux 800", bn: "রোবাক্স 800" },
+      category: "robux",
+      robuxAmount: 800,
+      price: 800,
+      listPrice: 900,
+      tag: { en: "Hot deal", bn: "হট ডিল" },
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "green",
+      monogram: "RBX",
+      image: "assets/img/products/robux.jpg",
+      updated: "2026-10-15",
+      short: {
+        en: "800 Robux delivered to your account — no password needed.",
+        bn: "আপনার অ্যাকাউন্টে 800 রোবাক্স — পাসওয়ার্ড লাগবে না।"
+      },
+      description: {
+        en: "A quick top-up for smaller purchases. We deliver via Roblox group payout or a gamepass purchase. First-time group payouts need a one-time 14-day membership wait that Roblox itself requires; after that, future orders move much faster.",
+        bn: "ছোট কেনাকাটার জন্য দ্রুত টপ-আপ। ডেলিভারি হয় Roblox গ্রুপ পেআউট বা গেমপাস কেনার মাধ্যমে। প্রথমবার গ্রুপ পেআউটে Roblox-এর নিয়মে একবার ১৪ দিনের অপেক্ষা লাগে; এরপরের অর্ডারগুলো অনেক দ্রুত হয়।"
+      },
+      includes: [
+        { en: "No password needed — just your Roblox username", bn: "পাসওয়ার্ড লাগবে না — শুধু আপনার Roblox ইউজারনেম" },
+        { en: "Delivered via group payout or gamepass", bn: "গ্রুপ পেআউট বা গেমপাসের মাধ্যমে ডেলিভারি" },
+        { en: "Status updates in the same WhatsApp chat", bn: "একই WhatsApp চ্যাটে আপডেট" }
+      ]
+    },
+    {
+      id: "robux-1000",
+      sku: "BB-RB-1000",
+      name: { en: "Robux 1,000", bn: "রোবাক্স 1,000" },
+      category: "robux",
+      robuxAmount: 1000,
+      price: 1000,
+      listPrice: 1300,
+      tag: { en: "Popular", bn: "জনপ্রিয়" },
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "green",
+      monogram: "RBX",
+      image: "assets/img/products/robux.jpg",
+      updated: "2026-10-16",
+      short: {
+        en: "1,000 Robux — the most popular pack in the shop.",
+        bn: "1,000 রোবাক্স — দোকানের সবচেয়ে জনপ্রিয় প্যাক।"
+      },
+      description: {
+        en: "The sweet spot for gamepasses, avatar items, and permanent fruits. We deliver via Roblox group payout or a gamepass purchase — you only ever share your username, never your password.",
+        bn: "গেমপাস, অ্যাভাটার আইটেম ও পার্মানেন্ট ফ্রুটের জন্য সবচেয়ে ভারসাম্যপূর্ণ প্যাক। ডেলিভারি হয় Roblox গ্রুপ পেআউট বা গেমপাস কেনার মাধ্যমে — শুধু ইউজারনেম দিলেই হয়, পাসওয়ার্ড কখনো নয়।"
+      },
+      includes: [
+        { en: "No password needed — just your Roblox username", bn: "পাসওয়ার্ড লাগবে না — শুধু আপনার Roblox ইউজারনেম" },
+        { en: "First-time group payout may take a one-time 14-day wait", bn: "প্রথম গ্রুপ পেআউটে একবার ১৪ দিনের অপেক্ষা লাগতে পারে" },
+        { en: "Each order confirmed in chat before payment", bn: "পেমেন্টের আগে প্রতিটি অর্ডার চ্যাটে নিশ্চিত করা হয়" }
+      ]
+    },
+    {
+      id: "robux-2000",
+      sku: "BB-RB-2000",
+      name: { en: "Robux 2,000", bn: "রোবাক্স 2,000" },
+      category: "robux",
+      robuxAmount: 2000,
+      price: 2000,
+      listPrice: 2400,
+      tag: { en: "Best value", bn: "সেরা দাম" },
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "green",
+      monogram: "RBX",
+      image: "assets/img/products/robux.jpg",
+      updated: "2026-10-14",
+      short: {
+        en: "2,000 Robux with the best per-Robux value.",
+        bn: "2,000 রোবাক্স — প্রতি রোবাক্সে সেরা দাম।"
+      },
+      description: {
+        en: "For bigger spends — limited items, multiple gamepasses, or gifting friends. Delivered through the same no-password methods as all our Robux packs.",
+        bn: "বড় কেনাকাটার জন্য — লিমিটেড আইটেম, একাধিক গেমপাস বা বন্ধুদের গিফট। আমাদের সব রোবাক্স প্যাকের মতোই পাসওয়ার্ড ছাড়া ডেলিভারি।"
+      },
+      includes: [
+        { en: "No password needed — just your Roblox username", bn: "পাসওয়ার্ড লাগবে না — শুধু আপনার Roblox ইউজারনেম" },
+        { en: "Group payout or gamepass delivery", bn: "গ্রুপ পেআউট বা গেমপাস ডেলিভারি" },
+        { en: "Ask us in the same chat if you need help", bn: "সাহায্য লাগলে একই চ্যাটে জিজ্ঞেস করুন" }
+      ]
+    },
+    {
+      id: "robux-5000",
+      sku: "BB-RB-5000",
+      name: { en: "Robux 5,000", bn: "রোবাক্স 5,000" },
+      category: "robux",
+      robuxAmount: 5000,
+      price: 4900,
+      listPrice: 5900,
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "green",
+      monogram: "RBX",
+      image: "assets/img/products/robux.jpg",
+      updated: "2026-10-13",
+      short: {
+        en: "5,000 Robux for the biggest orders.",
+        bn: "সবচেয়ে বড় অর্ডারের জন্য 5,000 রোবাক্স।"
+      },
+      description: {
+        en: "Our largest Robux pack. Large amounts are usually delivered via gamepass purchase; the admin walks you through the exact steps in chat.",
+        bn: "আমাদের সবচেয়ে বড় রোবাক্স প্যাক। বড় অঙ্ক সাধারণত গেমপাস কেনার মাধ্যমে দেওয়া হয়; সঠিক ধাপগুলো অ্যাডমিন চ্যাটে দেখিয়ে দেন।"
+      },
+      includes: [
+        { en: "No password needed — just your Roblox username", bn: "পাসওয়ার্ড লাগবে না — শুধু আপনার Roblox ইউজারনেম" },
+        { en: "Gamepass delivery guidance in chat", bn: "চ্যাটে গেমপাস ডেলিভারির দিকনির্দেশনা" },
+        { en: "Order confirmed in chat before payment", bn: "পেমেন্টের আগে অর্ডার চ্যাটে নিশ্চিত" }
+      ]
+    },
+
+    {
+      id: "bf-dragon",
+      sku: "BB-BF-DRAGON",
+      name: { en: "Dragon — Permanent Fruit", bn: "Dragon — পার্মানেন্ট ফ্রুট" },
+      category: "blox-fruits",
+      price: 4000,
+      listPrice: 5000,
+      tag: { en: "Top pick", bn: "টপ পিক" },
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: true,
+      tone: "",
+      monogram: "BF",
+      image: "assets/img/products/bf-dragon.jpg",
+      updated: "2026-10-19",
+      short: {
+        en: "Permanent Dragon, gifted to your account — equip it anytime.",
+        bn: "পার্মানেন্ট Dragon — আপনার অ্যাকাউন্টে গিফট, যখন খুশি ইকুইপ করুন।"
+      },
+      description: {
+        en: "Own Dragon forever: once redeemed, you can equip it as many times as you like, even after switching fruits. Delivered by in-game gifting to your Roblox account — no account access needed.",
+        bn: "Dragon চিরতরে আপনার: একবার নিলে অন্য ফ্রুটে গেলেও যখন খুশি আবার ইকুইপ করা যায়। ইন-গেম গিফটিং-এর মাধ্যমে আপনার Roblox অ্যাকাউন্টে ডেলিভারি — অ্যাকাউন্ট অ্যাক্সেস লাগে না।"
+      },
+      includes: [
+        { en: "Permanent unlock — equip anytime", bn: "পার্মানেন্ট আনলক — যখন খুশি ইকুইপ" },
+        { en: "Delivered via in-game gifting", bn: "ইন-গেম গিফটিং-এ ডেলিভারি" },
+        { en: "No password or account access needed", bn: "পাসওয়ার্ড বা অ্যাকাউন্ট অ্যাক্সেস লাগে না" }
+      ]
+    },
+    {
+      id: "bf-kitsune",
+      sku: "BB-BF-KITSUNE",
+      name: { en: "Kitsune — Permanent Fruit", bn: "Kitsune — পার্মানেন্ট ফ্রুট" },
+      category: "blox-fruits",
+      price: 4500,
+      tag: { en: "Limited offer", bn: "সীমিত অফার" },
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "",
+      monogram: "BF",
+      image: "assets/img/products/bf-kitsune.jpg",
+      updated: "2026-10-19",
+      short: {
+        en: "Permanent Kitsune — a limited favourite.",
+        bn: "পার্মানেন্ট Kitsune — সীমিত স্টকের জনপ্রিয় ফ্রুট।"
+      },
+      description: {
+        en: "Never lose your favourite ability again. Kitsune is gifted in-game to your Roblox account and stays yours permanently.",
+        bn: "প্রিয় অ্যাবিলিটি আর হারাবে না। Kitsune ইন-গেমে আপনার Roblox অ্যাকাউন্টে গিফট করা হয় এবং স্থায়ীভাবে আপনারই থাকে।"
+      },
+      includes: [
+        { en: "Permanent unlock — equip anytime", bn: "পার্মানেন্ট আনলক — যখন খুশি ইকুইপ" },
+        { en: "Delivered via in-game gifting", bn: "ইন-গেম গিফটিং-এ ডেলিভারি" },
+        { en: "Limited offer — ask about stock", bn: "সীমিত অফার — স্টক জানতে জিজ্ঞেস করুন" }
+      ]
+    },
+    {
+      id: "bf-tiger",
+      sku: "BB-BF-TIGER",
+      name: { en: "Tiger — Permanent Fruit", bn: "Tiger — পার্মানেন্ট ফ্রুট" },
+      category: "blox-fruits",
+      price: 3200,
+      listPrice: 3900,
+      tag: { en: "Popular", bn: "জনপ্রিয়" },
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "",
+      monogram: "BF",
+      image: "assets/img/products/bf-tiger.jpg",
+      updated: "2026-10-19",
+      short: {
+        en: "Permanent Tiger — the fruit that replaced Leopard.",
+        bn: "পার্মানেন্ট Tiger — Leopard-এর বদলে আসা ফ্রুট।"
+      },
+      description: {
+        en: "Tiger is the reworked Leopard fruit: turn into a fast, hard-hitting beast and keep it permanently equipped. Gifted in-game to your Roblox account — no account access needed.",
+        bn: "Tiger হলো নতুন রূপে Leopard ফ্রুট: দ্রুত ও শক্তিশালী বিস্টে রূপ নিন, চিরতরে ইকুইপ রাখুন। ইন-গেম গিফটিং-এ আপনার Roblox অ্যাকাউন্টে ডেলিভারি — অ্যাকাউন্ট অ্যাক্সেস লাগে না।"
+      },
+      includes: [
+        { en: "Permanent unlock — equip anytime", bn: "পার্মানেন্ট আনলক — যখন খুশি ইকুইপ" },
+        { en: "Delivered via in-game gifting", bn: "ইন-গেম গিফটিং-এ ডেলিভারি" },
+        { en: "No password or account access needed", bn: "পাসওয়ার্ড বা অ্যাকাউন্ট অ্যাক্সেস লাগে না" }
+      ]
+    },
+    {
+      id: "bf-control",
+      sku: "BB-BF-CONTROL",
+      name: { en: "Control — Permanent Fruit", bn: "Control — পার্মানেন্ট ফ্রুট" },
+      category: "blox-fruits",
+      price: 4500,
+      listPrice: 5500,
+      tag: { en: "Reworked", bn: "রিওয়ার্কড" },
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "",
+      monogram: "BF",
+      image: "assets/img/products/bf-control.jpg",
+      updated: "2026-10-19",
+      short: {
+        en: "Permanent Control — reworked with the Domain moveset.",
+        bn: "পার্মানেন্ট Control — নতুন Domain মুভসেটসহ রিওয়ার্কড।"
+      },
+      description: {
+        en: "Bend objects and enemies inside your own Domain with three combat modes — Base, Dagger and Fist. Permanent: equip it whenever you like. Gifted in-game to your Roblox account.",
+        bn: "নিজের Domain-এর ভেতরে শত্রু ও বস্তু নিয়ন্ত্রণ করুন — তিনটি কমব্যাট মোড: Base, Dagger ও Fist। পার্মানেন্ট: যখন খুশি ইকুইপ করুন। ইন-গেম গিফটিং-এ আপনার Roblox অ্যাকাউন্টে ডেলিভারি।"
+      },
+      includes: [
+        { en: "Permanent unlock — equip anytime", bn: "পার্মানেন্ট আনলক — যখন খুশি ইকুইপ" },
+        { en: "Delivered via in-game gifting", bn: "ইন-গেম গিফটিং-এ ডেলিভারি" },
+        { en: "No password or account access needed", bn: "পাসওয়ার্ড বা অ্যাকাউন্ট অ্যাক্সেস লাগে না" }
+      ]
+    },
+    {
+      id: "bf-yeti",
+      sku: "BB-BF-YETI",
+      name: { en: "Yeti — Permanent Fruit", bn: "Yeti — পার্মানেন্ট ফ্রুট" },
+      category: "blox-fruits",
+      price: 3600,
+      listPrice: 4300,
+      tag: { en: "New update", bn: "নতুন আপডেট" },
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "",
+      monogram: "BF",
+      image: "assets/img/products/bf-yeti.jpg",
+      updated: "2026-10-19",
+      short: {
+        en: "Permanent Yeti — transform into the ice beast.",
+        bn: "পার্মানেন্ট Yeti — আইস বিস্টে ট্রান্সফর্ম করুন।"
+      },
+      description: {
+        en: "Transform into the Yeti for heavy ice attacks, extra durability and freezing control — and keep it forever. Gifted in-game to your Roblox account — no account access needed.",
+        bn: "Yeti-তে ট্রান্সফর্ম করুন — ভারী আইস অ্যাটাক, বাড়তি ডিউরেবিলিটি আর ফ্রিজিং কন্ট্রোল, চিরতরে আপনার। ইন-গেম গিফটিং-এ আপনার Roblox অ্যাকাউন্টে ডেলিভারি — অ্যাকাউন্ট অ্যাক্সেস লাগে না।"
+      },
+      includes: [
+        { en: "Permanent unlock — equip anytime", bn: "পার্মানেন্ট আনলক — যখন খুশি ইকুইপ" },
+        { en: "Delivered via in-game gifting", bn: "ইন-গেম গিফটিং-এ ডেলিভারি" },
+        { en: "No password or account access needed", bn: "পাসওয়ার্ড বা অ্যাকাউন্ট অ্যাক্সেস লাগে না" }
+      ]
+    },
+    {
+      id: "bf-fiend",
+      sku: "BB-BF-FIEND",
+      name: { en: "Fiend — Yeti Mutation", bn: "Fiend — Yeti মিউটেশন" },
+      category: "blox-fruits",
+      price: 2400,
+      listPrice: 2900,
+      tag: { en: "Event limited", bn: "ইভেন্ট সীমিত" },
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "",
+      monogram: "BF",
+      image: "assets/img/products/bf-fiend.jpg",
+      updated: "2026-10-19",
+      short: {
+        en: "Fiend — the limited mutation of Yeti. Requires Permanent Yeti.",
+        bn: "Fiend — Yeti-র সীমিত মিউটেশন। পার্মানেন্ট Yeti লাগবে।"
+      },
+      description: {
+        en: "Fiend is the corrupted Yeti mutation: purple fire, powerful grabs, crew healing and a custom superdash. The mutation sits on top of a Permanent Yeti — the admin confirms the requirement with you in chat before anything is final.",
+        bn: "Fiend হলো Yeti-র করাপ্টেড মিউটেশন: পার্পল ফায়ার, শক্তিশালী গ্র্যাব, ক্রু-হিলিং আর কাস্টম সুপারড্যাশ। মিউটেশনটি পার্মানেন্ট Yeti-এর উপর বসে — কিছু চূড়ান্ত হওয়ার আগে অ্যাডমিন চ্যাটে রিকোয়ারমেন্ট নিশ্চিত করবেন।"
+      },
+      includes: [
+        { en: "Yeti mutation — base Permanent Yeti required", bn: "Yeti মিউটেশন — বেস পার্মানেন্ট Yeti লাগবে" },
+        { en: "Admin confirms requirements in chat", bn: "অ্যাডমিন চ্যাটে রিকোয়ারমেন্ট নিশ্চিত করেন" },
+        { en: "No password or account access needed", bn: "পাসওয়ার্ড বা অ্যাকাউন্ট অ্যাক্সেস লাগে না" }
+      ]
+    },
+    {
+      id: "bf-2x-money",
+      sku: "BB-BF-2XMONEY",
+      name: { en: "2x Money — Gamepass", bn: "2x Money — গেমপাস" },
+      category: "blox-fruits",
+      price: 380,
+      listPrice: 450,
+      tag: { en: "Best seller", bn: "বেস্ট সেলার" },
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "sand",
+      monogram: "BF",
+      image: "assets/img/products/blox-fruits.jpg",
+      updated: "2026-10-12",
+      short: {
+        en: "Double money from every grind — applied to your account.",
+        bn: "প্রতিটি গ্রাইন্ডে দ্বিগুণ আয় — আপনার অ্যাকাউন্টে অ্যাপ্লাইড।"
+      },
+      description: {
+        en: "The classic starter gamepass: enjoy 2x money everywhere in Blox Fruits. Applied directly to your own account by username.",
+        bn: "সবচেয়ে জনপ্রিয় স্টার্টার গেমপাস: Blox Fruits-এ সব জায়গায় 2x মানি। ইউজারনেম দিয়ে সরাসরি আপনার অ্যাকাউন্টে অ্যাপ্লাই করা হয়।"
+      },
+      includes: [
+        { en: "Applied to your own Roblox account", bn: "আপনার নিজের Roblox অ্যাকাউন্টে অ্যাপ্লাইড" },
+        { en: "Only your username is needed", bn: "শুধু ইউজারনেম দিলেই হয়" },
+        { en: "Confirmation in the same chat", bn: "একই চ্যাটে নিশ্চিতকরণ" }
+      ]
+    },
+    {
+      id: "bf-fruit-storage",
+      sku: "BB-BF-STORAGE",
+      name: { en: "Fruit Storage — Gamepass", bn: "Fruit Storage — গেমপাস" },
+      category: "blox-fruits",
+      price: 330,
+      listPrice: 370,
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "sand",
+      monogram: "BF",
+      image: "assets/img/products/blox-fruits.jpg",
+      updated: "2026-10-12",
+      short: {
+        en: "Store extra fruits instead of eating them.",
+        bn: "ফ্রুট খেয়ে ফেলার বদলে স্টোরে রাখুন।"
+      },
+      description: {
+        en: "Keep more fruits in your inventory and save them for trading later. Applied to your account by username.",
+        bn: "ইনভেন্টরিতে বেশি ফ্রুট রাখুন আর পরে ট্রেডের জন্য জমিয়ে রাখুন। ইউজারনেম দিয়ে অ্যাকাউন্টে অ্যাপ্লাই করা হয়।"
+      },
+      includes: [
+        { en: "Applied to your own Roblox account", bn: "আপনার নিজের Roblox অ্যাকাউন্টে অ্যাপ্লাইড" },
+        { en: "Only your username is needed", bn: "শুধু ইউজারনেম দিলেই হয়" },
+        { en: "Confirmation in the same chat", bn: "একই চ্যাটে নিশ্চিতকরণ" }
+      ]
+    },
+    {
+      id: "bf-fruit-notifier",
+      sku: "BB-BF-NOTIFIER",
+      name: { en: "Fruit Notifier — Gamepass", bn: "Fruit Notifier — গেমপাস" },
+      category: "blox-fruits",
+      price: 2250,
+      listPrice: 2750,
+      stock: "out",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "sand",
+      monogram: "BF",
+      image: "assets/img/products/blox-fruits.jpg",
+      updated: "2026-10-10",
+      short: {
+        en: "Get notified the moment a fruit spawns. Currently out of stock.",
+        bn: "ফ্রুট স্পন হওয়ার সঙ্গে সঙ্গে নোটিফিকেশন। বর্তমানে স্টকে নেই।"
+      },
+      description: {
+        en: "Never miss a fruit spawn again. This item is currently out of stock — check back later or message support.",
+        bn: "আর কোনো ফ্রুট স্পন মিস হবে না। এই পণ্যটি বর্তমানে স্টকে নেই — পরে আবার দেখুন বা সাপোর্টে মেসেজ দিন।"
+      },
+      includes: [
+        { en: "Applied to your own Roblox account", bn: "আপনার নিজের Roblox অ্যাকাউন্টে অ্যাপ্লাইড" },
+        { en: "Restock announced on WhatsApp", bn: "রিস্টক WhatsApp-এ জানানো হয়" },
+        { en: "Ask support for an estimate", bn: "সময় জানতে সাপোর্টে জিজ্ঞেস করুন" }
+      ]
+    },
+    {
+      id: "bf-leopard",
+      sku: "BB-BF-LEOPARD",
+      name: { en: "Leopard (now Tiger) — Archived", bn: "Leopard (এখন Tiger) — আর্কাইভড" },
+      category: "blox-fruits",
+      price: 3000,
+      stock: "out",
+      publication: "archived",
+      eligibility: "approved",
+      featured: false,
+      tone: "",
+      monogram: "BF",
+      image: "assets/img/products/blox-fruits.jpg",
+      updated: "2026-10-19",
+      short: {
+        en: "Leopard was replaced by Tiger in a game update — archived for reference.",
+        bn: "গেম আপডেটে Leopard-এর জায়গায় Tiger এসেছে — রেফারেন্সের জন্য আর্কাইভড।"
+      },
+      description: {
+        en: "Kept for reference: the game replaced Leopard with Tiger, which now has its own live listing. Archived listings are hidden from the catalogue and cannot be ordered.",
+        bn: "রেফারেন্সের জন্য রাখা: গেমে Leopard-এর জায়গায় Tiger এসেছে, যার এখন আলাদা লাইভ তালিকা আছে। আর্কাইভ করা পণ্য ক্যাটালগে দেখা যায় না এবং অর্ডার করা যায় না।"
+      },
+      includes: [
+        { en: "Archived — no longer offered", bn: "আর্কাইভ করা — আর দেওয়া হয় না" },
+        { en: "Hidden from the public catalogue", bn: "পাবলিক ক্যাটালগে দেখা যায় না" },
+        { en: "Restorable from the admin panel", bn: "অ্যাডমিন প্যানেল থেকে পুনরুদ্ধার করা যায়" }
+      ]
+    },
+
+    {
+      id: "mm2-corrupt",
+      sku: "BB-M2-CORRUPT",
+      name: { en: "Corrupt — Godly Knife", bn: "Corrupt — গডলি ছুরি" },
+      category: "mm2",
+      price: 1850,
+      listPrice: 2000,
+      tag: { en: "Sale", bn: "সেল" },
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: true,
+      tone: "",
+      monogram: "M2",
+      image: "assets/img/products/mm2.jpg",
+      updated: "2026-10-16",
+      short: {
+        en: "Corrupt godly — traded to you in-game.",
+        bn: "Corrupt গডলি — গেমের ভেতরে ট্রেডে ডেলিভারি।"
+      },
+      description: {
+        en: "A classic godly finish for your MM2 collection. Delivered through the in-game trade window or gifted where the game allows — the admin confirms the exact method in chat.",
+        bn: "আপনার MM2 কালেকশনের ক্লাসিক গডলি। গেমের ট্রেড উইন্ডো দিয়ে বা গেম যেখানে অনুমতি দেয় সেখানে গিফট করে ডেলিভারি — সঠিক পদ্ধতি অ্যাডমিন চ্যাটে নিশ্চিত করেন।"
+      },
+      includes: [
+        { en: "Delivered in-game after confirmation", bn: "নিশ্চিত করার পর গেমের ভেতরে ডেলিভারি" },
+        { en: "No password or account access needed", bn: "পাসওয়ার্ড বা অ্যাকাউন্ট অ্যাক্সেস লাগে না" },
+        { en: "Ask us in the same chat if you need help", bn: "সাহায্য লাগলে একই চ্যাটে জিজ্ঞেস করুন" }
+      ]
+    },
+    {
+      id: "mm2-harvester",
+      sku: "BB-M2-HARVESTER",
+      name: { en: "Harvester — Godly Knife", bn: "Harvester — গডলি ছুরি" },
+      category: "mm2",
+      price: 1200,
+      listPrice: 1500,
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "sand",
+      monogram: "M2",
+      image: "assets/img/products/mm2.jpg",
+      updated: "2026-10-14",
+      short: {
+        en: "Harvester godly — delivered in-game.",
+        bn: "Harvester গডলি — গেমের ভেতরে ডেলিভারি।"
+      },
+      description: {
+        en: "The fan-favourite Harvester, delivered through the in-game trade window. Availability confirmed with the admin before anything is final.",
+        bn: "ভক্তদের প্রিয় Harvester, গেমের ট্রেড উইন্ডো দিয়ে ডেলিভারি। চূড়ান্ত হওয়ার আগে অ্যাডমিনের সাথে স্টক নিশ্চিত করা হয়।"
+      },
+      includes: [
+        { en: "Delivered in-game after confirmation", bn: "নিশ্চিত করার পর গেমের ভেতরে ডেলিভারি" },
+        { en: "No password or account access needed", bn: "পাসওয়ার্ড বা অ্যাকাউন্ট অ্যাক্সেস লাগে না" },
+        { en: "Trade steps explained in chat", bn: "ট্রেডের ধাপগুলো চ্যাটে বুঝিয়ে দেওয়া হয়" }
+      ]
+    },
+    {
+      id: "mm2-icebreaker",
+      sku: "BB-M2-ICEBREAKER",
+      name: { en: "Icebreaker — Godly Knife", bn: "Icebreaker — গডলি ছুরি" },
+      category: "mm2",
+      price: 500,
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "",
+      monogram: "M2",
+      image: "assets/img/products/mm2.jpg",
+      updated: "2026-10-11",
+      short: {
+        en: "Icebreaker godly — a solid budget pick.",
+        bn: "Icebreaker গডলি — বাজেটে দারুণ পছন্দ।"
+      },
+      description: {
+        en: "A popular godly at a friendly price. Delivered in-game after the admin confirms the trade details with you.",
+        bn: "সহজ দামে জনপ্রিয় গডলি। ট্রেডের বিবরণ অ্যাডমিনের সাথে নিশ্চিত হওয়ার পর গেমের ভেতরে ডেলিভারি।"
+      },
+      includes: [
+        { en: "Delivered in-game after confirmation", bn: "নিশ্চিত করার পর গেমের ভেতরে ডেলিভারি" },
+        { en: "No password or account access needed", bn: "পাসওয়ার্ড বা অ্যাকাউন্ট অ্যাক্সেস লাগে না" },
+        { en: "Support in the same chat", bn: "একই চ্যাটে সহায়তা" }
+      ]
+    },
+    {
+      id: "mm2-elderwood",
+      sku: "BB-M2-ELDERWOOD",
+      name: { en: "Elderwood Set", bn: "Elderwood সেট" },
+      category: "mm2",
+      price: 600,
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "sand",
+      monogram: "M2",
+      image: "assets/img/products/mm2.jpg",
+      updated: "2026-10-09",
+      short: {
+        en: "The full Elderwood set in one trade.",
+        bn: "এক ট্রেডেই পুরো Elderwood সেট।"
+      },
+      description: {
+        en: "Collect the complete Elderwood set without grinding the event. Everything is traded to you in a single confirmed session.",
+        bn: "ইভেন্ট গ্রাইন্ড ছাড়াই পুরো Elderwood সেট সংগ্রহ করুন। নিশ্চিত একটি সেশনে সবকিছু ট্রেড করে দেওয়া হয়।"
+      },
+      includes: [
+        { en: "Complete set in one trade", bn: "এক ট্রেডে সম্পূর্ণ সেট" },
+        { en: "No password or account access needed", bn: "পাসওয়ার্ড বা অ্যাকাউন্ট অ্যাক্সেস লাগে না" },
+        { en: "Session timing agreed in chat", bn: "সেশনের সময় চ্যাটে ঠিক করা হয়" }
+      ]
+    },
+    {
+      id: "mm2-sweet-set",
+      sku: "BB-M2-SWEET",
+      name: { en: "Sweet Set", bn: "Sweet সেট" },
+      category: "mm2",
+      price: 1800,
+      stock: "in",
+      publication: "draft",
+      eligibility: "approved",
+      featured: false,
+      tone: "sand",
+      monogram: "M2",
+      image: "assets/img/products/mm2.jpg",
+      updated: "2026-10-08",
+      short: {
+        en: "Sweet set — draft listing, not visible publicly.",
+        bn: "Sweet সেট — খসড়া তালিকা, পাবলিক ক্যাটালগে দেখা যায় না।"
+      },
+      description: {
+        en: "A sweet collectible set. This listing is still a draft and will appear in the catalogue once it is published.",
+        bn: "মিষ্টি কালেক্টিবল সেট। তালিকাটি এখনো খসড়া; প্রকাশ করা হলে ক্যাটালগে দেখা যাবে।"
+      },
+      includes: [
+        { en: "Draft — publish from the admin panel", bn: "খসড়া — অ্যাডমিন প্যানেল থেকে প্রকাশ করুন" },
+        { en: "No password or account access needed", bn: "পাসওয়ার্ড বা অ্যাকাউন্ট অ্যাক্সেস লাগে না" },
+        { en: "Details confirmed in chat", bn: "বিবরণ চ্যাটে নিশ্চিত করা হয়" }
+      ]
+    },
+
+    {
+      id: "rv-prime",
+      sku: "BB-RV-PRIME",
+      name: { en: "Prime Bundle — Gamepass", bn: "Prime Bundle — গেমপাস" },
+      category: "rivals",
+      price: 510,
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "",
+      monogram: "RV",
+      image: "assets/img/products/rivals.jpg",
+      updated: "2026-10-15",
+      short: {
+        en: "Prime bundle applied to your Rivals account.",
+        bn: "Prime বান্ডল আপনার Rivals অ্যাকাউন্টে অ্যাপ্লাইড।"
+      },
+      description: {
+        en: "Skip the grind with the Prime bundle. Applied to your own account by username — the admin confirms everything in chat first.",
+        bn: "Prime বান্ডলে গ্রাইন্ড এড়িয়ে যান। ইউজারনেম দিয়ে আপনার নিজের অ্যাকাউন্টে অ্যাপ্লাই করা হয় — আগে চ্যাটে সব নিশ্চিত করা হয়।"
+      },
+      includes: [
+        { en: "Applied to your own Roblox account", bn: "আপনার নিজের Roblox অ্যাকাউন্টে অ্যাপ্লাইড" },
+        { en: "Only your username is needed", bn: "শুধু ইউজারনেম দিলেই হয়" },
+        { en: "Confirmation in the same chat", bn: "একই চ্যাটে নিশ্চিতকরণ" }
+      ]
+    },
+    {
+      id: "rv-exogun",
+      sku: "BB-RV-EXOGUN",
+      name: { en: "Exogun Bundle — Gamepass", bn: "Exogun Bundle — গেমপাস" },
+      category: "rivals",
+      price: 552,
+      tag: { en: "Popular", bn: "জনপ্রিয়" },
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "sand",
+      monogram: "RV",
+      image: "assets/img/products/rivals.jpg",
+      updated: "2026-10-14",
+      short: {
+        en: "Exogun bundle — a Rivals favourite.",
+        bn: "Exogun বান্ডল — Rivals খেলোয়াড়দের প্রিয়।"
+      },
+      description: {
+        en: "The Exogun bundle unlocks a serious loadout. Applied to your own account by username after confirmation in chat.",
+        bn: "Exogun বান্ডলে দুর্দান্ত লোডআউট আনলক হয়। চ্যাটে নিশ্চিত হওয়ার পর ইউজারনেম দিয়ে নিজের অ্যাকাউন্টে অ্যাপ্লাই।"
+      },
+      includes: [
+        { en: "Applied to your own Roblox account", bn: "আপনার নিজের Roblox অ্যাকাউন্টে অ্যাপ্লাইড" },
+        { en: "Only your username is needed", bn: "শুধু ইউজারনেম দিলেই হয়" },
+        { en: "Confirmation in the same chat", bn: "একই চ্যাটে নিশ্চিতকরণ" }
+      ]
+    },
+    {
+      id: "rv-classic",
+      sku: "BB-RV-CLASSIC",
+      name: { en: "Classic Bundle — Gamepass", bn: "Classic Bundle — গেমপাস" },
+      category: "rivals",
+      price: 977,
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "",
+      monogram: "RV",
+      image: "assets/img/products/rivals.jpg",
+      updated: "2026-10-12",
+      short: {
+        en: "The classic bundle, applied to your account.",
+        bn: "ক্লাসিক বান্ডল, আপনার অ্যাকাউন্টে অ্যাপ্লাইড।"
+      },
+      description: {
+        en: "The full classic bundle for players who want everything in one go. Applied to your own account by username.",
+        bn: "যারা একবারে সব চান তাদের জন্য পূর্ণ ক্লাসিক বান্ডল। ইউজারনেম দিয়ে নিজের অ্যাকাউন্টে অ্যাপ্লাই করা হয়।"
+      },
+      includes: [
+        { en: "Applied to your own Roblox account", bn: "আপনার নিজের Roblox অ্যাকাউন্টে অ্যাপ্লাইড" },
+        { en: "Only your username is needed", bn: "শুধু ইউজারনেম দিলেই হয়" },
+        { en: "Confirmation in the same chat", bn: "একই চ্যাটে নিশ্চিতকরণ" }
+      ]
+    },
+    {
+      id: "rv-heavy-duty",
+      sku: "BB-RV-HEAVYDUTY",
+      name: { en: "Heavy Duty Bundle — Gamepass", bn: "Heavy Duty Bundle — গেমপাস" },
+      category: "rivals",
+      price: 1614,
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "sand",
+      monogram: "RV",
+      image: "assets/img/products/rivals.jpg",
+      updated: "2026-10-11",
+      short: {
+        en: "Heavy Duty bundle for serious players.",
+        bn: "সিরিয়াস খেলোয়াড়দের জন্য Heavy Duty বান্ডল।"
+      },
+      description: {
+        en: "Our biggest Rivals bundle. The admin confirms availability and applies it to your own account by username.",
+        bn: "আমাদের সবচেয়ে বড় Rivals বান্ডল। অ্যাডমিন স্টক নিশ্চিত করে ইউজারনেম দিয়ে নিজের অ্যাকাউন্টে অ্যাপ্লাই করেন।"
+      },
+      includes: [
+        { en: "Applied to your own Roblox account", bn: "আপনার নিজের Roblox অ্যাকাউন্টে অ্যাপ্লাইড" },
+        { en: "Only your username is needed", bn: "শুধু ইউজারনেম দিলেই হয়" },
+        { en: "Confirmation in the same chat", bn: "একই চ্যাটে নিশ্চিতকরণ" }
+      ]
+    },
+
+    {
+      id: "sb-vaquitas",
+      sku: "BB-SB-VAQ",
+      name: { en: "Las Vaquitas Saturnitas — Secret", bn: "Las Vaquitas Saturnitas — সিক্রেট" },
+      category: "steal-a-brainrot",
+      price: 5000,
+      tag: { en: "Secret", bn: "সিক্রেট" },
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: true,
+      tone: "sand",
+      monogram: "SB",
+      image: "assets/img/products/steal-a-brainrot.jpg",
+      updated: "2026-10-17",
+      short: {
+        en: "The secret Las Vaquitas Saturnitas — delivered in-game.",
+        bn: "সিক্রেট Las Vaquitas Saturnitas — গেমের ভেতরে ডেলিভারি।"
+      },
+      description: {
+        en: "The rainbow secret everyone is hunting, with a massive 997M/s base income. Delivered in-game in a confirmed session — the admin explains exactly how it works before you pay.",
+        bn: "সবার কাঙ্ক্ষিত রেইনবো সিক্রেট — বিশাল 997M/s ইনকামের সঙ্গে। নিশ্চিত সেশনে গেমের ভেতরে ডেলিভারি — পেমেন্টের আগেই অ্যাডমিন পুরো পদ্ধতি বুঝিয়ে দেন।"
+      },
+      includes: [
+        { en: "Delivered in-game in a confirmed session", bn: "নিশ্চিত সেশনে গেমের ভেতরে ডেলিভারি" },
+        { en: "No password or account access needed", bn: "পাসওয়ার্ড বা অ্যাকাউন্ট অ্যাক্সেস লাগে না" },
+        { en: "Steps explained before you pay", bn: "পেমেন্টের আগেই ধাপগুলো বুঝিয়ে দেওয়া হয়" }
+      ]
+    },
+    {
+      id: "sb-secret-random",
+      sku: "BB-SB-SECRET",
+      name: { en: "Secret Character (Random)", bn: "সিক্রেট চরিত্র (র‍্যান্ডম)" },
+      category: "steal-a-brainrot",
+      price: 2500,
+      stock: "in",
+      publication: "published",
+      eligibility: "approved",
+      featured: false,
+      tone: "",
+      monogram: "SB",
+      image: "assets/img/products/steal-a-brainrot.jpg",
+      updated: "2026-10-16",
+      short: {
+        en: "A random secret character for your base.",
+        bn: "আপনার বেসের জন্য একটি র‍্যান্ডম সিক্রেট চরিত্র।"
+      },
+      description: {
+        en: "Roll a random secret from our current stock. Which secrets are available is confirmed in chat before you pay.",
+        bn: "আমাদের বর্তমান স্টক থেকে র‍্যান্ডম সিক্রেট। পেমেন্টের আগে চ্যাটে নিশ্চিত করা হয় কোনগুলো আছে।"
+      },
+      includes: [
+        { en: "One random secret from current stock", bn: "বর্তমান স্টক থেকে একটি র‍্যান্ডম সিক্রেট" },
+        { en: "Available characters confirmed in chat", bn: "কোন চরিত্র আছে তা চ্যাটে নিশ্চিত" },
+        { en: "No password or account access needed", bn: "পাসওয়ার্ড বা অ্যাকাউন্ট অ্যাক্সেস লাগে না" }
+      ]
+    },
+    {
+      id: "sb-cash-pack",
+      sku: "BB-SB-CASH",
+      name: { en: "Cash Pack — 1B/s", bn: "ক্যাশ প্যাক — 1B/s" },
+      category: "steal-a-brainrot",
+      price: 950,
+      stock: "out",
+      publication: "draft",
+      eligibility: "review",
+      featured: false,
+      tone: "sand",
+      monogram: "SB",
+      image: "assets/img/products/steal-a-brainrot.jpg",
+      updated: "2026-10-05",
+      short: {
+        en: "Cash boost draft awaiting review.",
+        bn: "ক্যাশ বুস্ট খসড়া — পর্যালোচনার অপেক্ষায়।"
+      },
+      description: {
+        en: "A cash boost draft that is waiting on an eligibility review — it can only be published once the delivery method is approved.",
+        bn: "ক্যাশ বুস্টের খসড়া যা অনুমোদন পর্যালোচনার অপেক্ষায় — ডেলিভারি পদ্ধতি অনুমোদিত হলেই প্রকাশ করা যাবে।"
+      },
+      includes: [
+        { en: "Eligibility review required", bn: "অনুমোদন পর্যালোচনা প্রয়োজন" },
+        { en: "Not public until approved", bn: "অনুমোদনের আগে পাবলিকে নয়" },
+        { en: "Draft visible only in admin", bn: "খসড়া শুধু অ্যাডমিনে দেখা যায়" }
+      ]
+    }
+  ]
+};
+
+/* ----------------------------------------------------------
+   Local admin overrides (browser-only persistence).
+   The admin panel saves its product table and shop settings to
+   localStorage, and storefront + admin pages read them back here
+   so changes show up on this device. Reset with the "Reset demo
+   data" button in the admin top bar, or bump `dataVersion` above.
+   A real deployment would replace this with a backend (§11).
+   Keys: bb_admin_v1 (product table), bb_admin_settings_v1
+   (WhatsApp number + order-message templates).
+   ---------------------------------------------------------- */
+(function () {
+  function loadSnapshot(key, use) {
+    try {
+      var raw = localStorage.getItem(key);
+      if (!raw) return;
+      var snap = JSON.parse(raw);
+      if (!snap || snap.version !== window.BB_DATA.dataVersion) return;
+      use(snap);
+    } catch (e) { /* storage blocked or corrupt — use config data */ }
+  }
+
+  loadSnapshot("bb_admin_v1", function (snap) {
+    if (Array.isArray(snap.products)) window.BB_DATA.products = snap.products;
+  });
+
+  loadSnapshot("bb_admin_settings_v1", function (snap) {
+    var s = snap.settings || {};
+    window.BB_DATA.whatsappNumber = String(s.whatsappNumber || "");
+    window.BB_DATA.whatsappTemplates = {
+      product: String(s.whatsappTemplateProduct || ""),
+      robux: String(s.whatsappTemplateRobux || "")
+    };
+  });
+})();

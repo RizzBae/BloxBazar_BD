@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Marketplace — BloxBazaar BD</title>
+  <meta name="description" content="Browse Robux packs, Blox Fruits items, MM2 knives and sets, Rivals bundles, and Steal a Brainrot characters at BloxBazaar BD. Search, filter by category and price, and see BDT prices and stock status at a glance.">
+  <link rel="icon" href="assets/img/website%20logo/favicon_navy_gold.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/tailwind.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/screens.css">
+</head>
+<body>
+  <div id="site-header"></div>
+
+  <main id="main">
+    <section class="section-tight">
+      <div class="container">
+        <div class="mb-24">
+          <h1 data-i18n="cat.title">Marketplace</h1>
+          <p class="section-sub" data-i18n="cat.sub">Browse Robux packs and in-game items. Final prices and availability are confirmed with the admin on WhatsApp.</p>
+        </div>
+
+        <!-- Toolbar: search, category chips, price range -->
+        <div class="cat-toolbar">
+          <div>
+            <label class="visually-hidden" for="cat-q" data-i18n="cat.searchPlaceholder">Search the marketplace</label>
+            <div class="input-wrap">
+              <svg class="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+              <input class="input with-icon" id="cat-q" type="search" data-i18n-ph="cat.searchPlaceholder" autocomplete="off">
+            </div>
+          </div>
+          <div class="cat-filters">
+            <div class="cat-filters-group">
+              <span class="cat-filters-label" data-i18n="cat.category">Category</span>
+              <div class="chip-row" id="cat-chips"></div>
+            </div>
+            <div class="cat-filters-group">
+              <span class="cat-filters-label" id="range-label" data-i18n="cat.priceRange">Price range (BDT)</span>
+              <div class="range-row" role="group" aria-labelledby="range-label">
+                <input class="input" id="cat-min" type="number" min="0" step="50" inputmode="numeric" data-i18n-ph="cat.min" aria-label="Minimum price">
+                <span aria-hidden="true">–</span>
+                <input class="input" id="cat-max" type="number" min="0" step="50" inputmode="numeric" data-i18n-ph="cat.max" aria-label="Maximum price">
+                <button class="btn btn-ghost btn-sm" id="cat-clear" type="button" data-i18n="cta.clearFilters">Clear filters</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="results-meta">
+          <span id="results-meta" aria-live="polite"></span>
+        </div>
+
+        <div class="product-grid" id="cat-grid"></div>
+        <div id="cat-state"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/guides-data.js"></script>
+  <script src="assets/js/i18n.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/site.js"></script>
+  <script src="assets/js/components.js"></script>
+  <script src="assets/js/catalogue.js"></script>
+</body>
+</html>

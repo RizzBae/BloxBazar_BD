@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BloxBazaar BD — Robux, Blox Fruits, MM2 &amp; more</title>
+  <meta name="description" content="BloxBazaar BD is an independent Roblox shop in Bangladesh. Browse Robux packs, Blox Fruits items, MM2 knives, Rivals bundles, and Steal a Brainrot characters — confirmed on WhatsApp.">
+  <link rel="icon" href="assets/img/website%20logo/favicon_navy_gold.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/tailwind.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/screens.css">
+</head>
+<body>
+  <div id="site-header"></div>
+
+  <main id="main">
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="container">
+        <span class="eyebrow" data-i18n="home.eyebrow">Independent Roblox shop · Bangladesh</span>
+        <h1 class="hero-title" data-i18n="home.title">Robux, Blox Fruits and more — confirmed on WhatsApp.</h1>
+        <p class="hero-sub" data-i18n="home.sub">Browse Robux packs, Blox Fruits items, MM2 knives, Rivals bundles, and Steal a Brainrot characters. Availability and delivery are confirmed by a real person on WhatsApp.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary btn-lg" href="catalogue.html" data-i18n="cta.browse">Browse Marketplace</a>
+          <a class="btn btn-secondary btn-lg" href="how-it-works.html" data-i18n="cta.how">How it works</a>
+        </div>
+
+        <form class="hero-search" action="catalogue.html" method="get" role="search">
+          <label class="visually-hidden" for="hero-q" data-i18n="cat.searchPlaceholder">Search the marketplace</label>
+          <div class="search-bar">
+            <div class="input-wrap">
+              <svg class="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+              <input class="input with-icon" id="hero-q" name="q" type="search" data-i18n-ph="home.searchPlaceholder" autocomplete="off">
+            </div>
+            <button class="btn btn-primary" type="submit" data-i18n="cta.search">Search</button>
+          </div>
+        </form>
+
+        <p class="hero-note">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.5 3 7.8 7.5 9.5 4.5-1.7 7.5-5 7.5-9.5V6L12 3Z"/><path d="m9 12 2 2 4-4.5"/></svg>
+          <span data-i18n="home.note">We never ask for passwords or one-time codes.</span>
+        </p>
+      </div>
+    </section>
+
+    <!-- Shop by game -->
+    <section class="section-tight" id="games">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow" data-i18n="home.gamesEyebrow">Browse</span>
+          <h2 class="section-title" data-i18n="home.gamesTitle">Shop by game</h2>
+          <p class="section-sub" data-i18n="home.gamesSub">Pick a game to see everything we stock for it.</p>
+        </div>
+        <div class="game-grid" id="games-grid"></div>
+      </div>
+    </section>
+
+    <!-- Featured items -->
+    <section class="section-tight">
+      <div class="container">
+        <div class="section-head row">
+          <div>
+            <span class="eyebrow" data-i18n="home.featuredEyebrow">Shop</span>
+            <h2 class="section-title" data-i18n="home.featuredTitle">Featured items</h2>
+            <p class="section-sub" data-i18n="home.featuredSub">Popular picks, refreshed often. Availability is confirmed on WhatsApp.</p>
+          </div>
+          <a class="btn btn-secondary" href="catalogue.html" data-i18n="cta.browse">Browse Marketplace</a>
+        </div>
+        <div class="product-grid" id="featured-grid" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- Game guides -->
+    <section class="section" id="guides">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow" data-i18n="home.guidesEyebrow">Learn</span>
+          <h2 class="section-title" data-i18n="home.guidesTitle">Game guides</h2>
+          <p class="section-sub" data-i18n="home.guidesSub">Learn how Robux, items, and trades work — and how to stay safe.</p>
+        </div>
+        <div class="grid cols-3" id="guides-grid" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- How ordering works -->
+    <section class="section" id="how">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow" data-i18n="home.howEyebrow">Ordering</span>
+          <h2 class="section-title" data-i18n="home.howTitle">How ordering works</h2>
+          <p class="section-sub" data-i18n="home.howSub">Nothing is final until you and the admin confirm it in chat.</p>
+        </div>
+        <div class="grid cols-2">
+          <div class="step">
+            <div class="step-num" aria-hidden="true">1</div>
+            <div>
+              <div class="step-title" data-i18n="how.s1t">Open an eligible product</div>
+              <p class="step-desc" data-i18n="how.s1d">Browse the marketplace and open a product that is eligible and in stock.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num" aria-hidden="true">2</div>
+            <div>
+              <div class="step-title" data-i18n="how.s2t">Choose a quantity and tap Order on WhatsApp</div>
+              <p class="step-desc" data-i18n="how.s2d">The button opens WhatsApp with a prepared message for the shop admin.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num" aria-hidden="true">3</div>
+            <div>
+              <div class="step-title" data-i18n="how.s3t">Review the pre-filled message</div>
+              <p class="step-desc" data-i18n="how.s3d">Check the product name, SKU, quantity, and listed price in the message field.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num" aria-hidden="true">4</div>
+            <div>
+              <div class="step-title" data-i18n="how.s5t">The admin confirms in chat</div>
+              <p class="step-desc" data-i18n="how.s5d">Availability, the final price, and the next steps are confirmed in the conversation.</p>
+            </div>
+          </div>
+        </div>
+        <p class="mt-24">
+          <a class="btn btn-ghost" href="how-it-works.html">
+            <span data-i18n="home.howLink">Read the full flow and FAQ</span>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+          </a>
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/guides-data.js"></script>
+  <script src="assets/js/i18n.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/site.js"></script>
+  <script src="assets/js/components.js"></script>
+  <script src="assets/js/home.js"></script>
+</body>
+</html>

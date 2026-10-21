@@ -73,10 +73,18 @@ const config = {
   adminWriteRatePerMin: envInt("BB_ADMIN_WRITE_RATE_PER_MIN", 60),
   uploadRatePerHour: envInt("BB_UPLOAD_RATE_PER_HOUR", 20),
 
-  /* Seeded owner account. CHANGE THE PASSWORD before any real use —
-     the default is the design-stage demo password. */
+  /* Sign-in and password-recovery attempts (per IP, per minute). */
+  authRatePerMin: envInt("BB_AUTH_RATE_PER_MIN", 20),
+
+  /* Recovery-code guess limits (per account and per IP). */
+  recoveryAccountMax: envInt("BB_RECOVERY_ACCOUNT_MAX", 5),
+  recoveryIpMax: envInt("BB_RECOVERY_IP_MAX", 12),
+  recoveryWindowMin: envInt("BB_RECOVERY_WINDOW_MIN", 15),
+
+  /* First-run owner account. If no password is supplied, the seeder creates
+     a random one and prints it once. */
   seedAdminEmail: env("BB_SEED_ADMIN_EMAIL", "owner@bloxbazaar.local"),
-  seedAdminPassword: env("BB_SEED_ADMIN_PASSWORD", "BloxBazaar@2026"),
+  seedAdminPassword: env("BB_SEED_ADMIN_PASSWORD", ""),
 };
 
 module.exports = config;

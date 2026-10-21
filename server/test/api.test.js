@@ -1,11 +1,11 @@
 /* =========================================================
-   BloxBazaar BD — server/test/api.test.js
-   API test suite (node:test): the PRD §6 state rules, auth and
+   BloxBazaar BD â€” server/test/api.test.js
+   API test suite (node:test): the PRD Â§6 state rules, auth and
    CSRF hardening, lockout, rate limits, uploads, settings, the
    ETag/304 flow, and the server-side admin page gate.
 
    Runs against a throwaway database + uploads directory in the
-   OS temp folder — never the real server/data files.
+   OS temp folder â€” never the real server/data files.
      npm test        (or: node --test server/test/)
    ========================================================= */
 
@@ -25,6 +25,8 @@ process.env.BB_PUBLIC_RATE_PER_MIN = "0";
 process.env.BB_ADMIN_READ_RATE_PER_MIN = "0";
 process.env.BB_ADMIN_WRITE_RATE_PER_MIN = "0";
 process.env.BB_UPLOAD_RATE_PER_HOUR = "0";
+process.env.BB_AUTH_RATE_PER_MIN = "0";
+process.env.BB_SEED_ADMIN_PASSWORD = "OwnerTestPass@2026";
 
 const config = require("../config");
 const { openDatabase } = require("../db");
@@ -127,7 +129,7 @@ after(async () => {
   fs.rmSync(tmpRoot, { recursive: true, force: true });
 });
 
-/* ---------- Public API (PRD §8.1) ---------- */
+/* ---------- Public API (PRD Â§8.1) ---------- */
 
 test("public API: bootstrap, catalogue filters, detail, guides", async () => {
   const c = newClient();
@@ -144,7 +146,7 @@ test("public API: bootstrap, catalogue filters, detail, guides", async () => {
 
   const cat = await c.request("GET", "/api/v1/catalogue?limit=60");
   assert.equal(cat.status, 200);
-  assert.equal(cat.body.total, 26, "29 seeded − 2 drafts − 1 archived are public");
+  assert.equal(cat.body.total, 26, "29 seeded âˆ’ 2 drafts âˆ’ 1 archived are public");
   assert.equal(cat.body.items.length, 26);
   for (const p of cat.body.items) {
     assert.equal(p.publication, "published");
@@ -195,7 +197,7 @@ test("public API: bootstrap, catalogue filters, detail, guides", async () => {
   assert.equal((await c.request("GET", "/api/v1/guides/robux")).status, 200);
 });
 
-test("public reads carry a dataVersion ETag and answer 304 (PRD §12)", async () => {
+test("public reads carry a dataVersion ETag and answer 304 (PRD Â§12)", async () => {
   const c = newClient();
   const first = await c.request("GET", "/api/v1/bootstrap");
   const etag = first.headers.get("etag");
@@ -207,7 +209,7 @@ test("public reads carry a dataVersion ETag and answer 304 (PRD §12)", async ()
   assert.equal(cached.status, 304);
 });
 
-/* ---------- Auth + CSRF (PRD §7, §10) ---------- */
+/* ---------- Auth + CSRF (PRD Â§7, Â§10) ---------- */
 
 test("admin routes require a session; CSRF is enforced on writes", async () => {
   const anon = newClient();
@@ -233,7 +235,7 @@ test("admin routes require a session; CSRF is enforced on writes", async () => {
   assert.equal(session.status, 200);
   assert.equal(session.body.admin.email, OWNER.email);
 
-  const payload = { name: { en: "CSRF Probe", bn: "প্রোব" }, category: "robux", price: 100 };
+  const payload = { name: { en: "CSRF Probe", bn: "à¦ªà§à¦°à§‹à¦¬" }, category: "robux", price: 100 };
   const noCsrf = await owner.request("POST", "/api/v1/admin/products", payload, { noCsrf: true });
   assert.equal(noCsrf.status, 403);
   const badCsrf = await owner.request("POST", "/api/v1/admin/products", payload, { badCsrf: true });
@@ -251,13 +253,13 @@ test("admin list returns the full catalogue with internals", async () => {
   assert.ok(Number.isInteger(draft.version));
 });
 
-/* ---------- State rules (PRD §6) ---------- */
+/* ---------- State rules (PRD Â§6) ---------- */
 
 test("create defaults are safe: draft + needs review + out of stock", async () => {
   const res = await owner.request("POST", "/api/v1/admin/products", {
-    name: { en: "Test Item Alpha", bn: "টেস্ট আইটেম আলফা" },
-    short: { en: "A test item", bn: "একটি টেস্ট আইটেম" },
-    description: { en: "Created by the test suite.", bn: "টেস্ট স্যুট তৈরি করেছে।" },
+    name: { en: "Test Item Alpha", bn: "à¦Ÿà§‡à¦¸à§à¦Ÿ à¦†à¦‡à¦Ÿà§‡à¦® à¦†à¦²à¦«à¦¾" },
+    short: { en: "A test item", bn: "à¦à¦•à¦Ÿà¦¿ à¦Ÿà§‡à¦¸à§à¦Ÿ à¦†à¦‡à¦Ÿà§‡à¦®" },
+    description: { en: "Created by the test suite.", bn: "à¦Ÿà§‡à¦¸à§à¦Ÿ à¦¸à§à¦¯à§à¦Ÿ à¦¤à§ˆà¦°à¦¿ à¦•à¦°à§‡à¦›à§‡à¥¤" },
     category: "robux",
     price: 500,
   });
@@ -398,7 +400,7 @@ test("published products are archived, never hard-deleted", async () => {
 
   /* Drafts delete cleanly, and the act is recorded. */
   const draft = await owner.request("POST", "/api/v1/admin/products", {
-    name: { en: "Delete Me", bn: "মুছে ফেলো" },
+    name: { en: "Delete Me", bn: "à¦®à§à¦›à§‡ à¦«à§‡à¦²à§‹" },
     category: "robux",
     price: 100,
   });
@@ -440,6 +442,9 @@ test("editor role cannot approve eligibility or delete products", async () => {
 
   const del = await editor.request("DELETE", `/api/v1/admin/products/sb-cash-pack?version=${draft.version}`);
   assert.equal(del.status, 403);
+
+  /* The audit trail names admins, so editors cannot read it. */
+  assert.equal((await editor.request("GET", "/api/v1/admin/audit")).status, 403);
 });
 
 /* ---------- Settings, guides, uploads ---------- */
@@ -475,18 +480,18 @@ test("settings: partial updates merge, validation + version guards apply", async
   });
   assert.equal(badWa.status, 422);
 
-  /* WhatsApp number + custom order-message templates (admin → Shop
+  /* WhatsApp number + custom order-message templates (admin â†’ Shop
      settings): stored, echoed back, and served on the public bootstrap. */
   const putWa = await owner.request("PUT", "/api/v1/admin/settings", {
     whatsappNumber: "8801700000000",
-    whatsappTemplateProduct: "Hi {brand}, I want {name} x{qty} — BDT {price}.{robloxIdLine} {url}",
-    whatsappTemplateRobux: "Hi {brand}, {amount} Robux — BDT {price}.{robloxIdLine} {url}",
+    whatsappTemplateProduct: "Hi {brand}, I want {name} x{qty} â€” BDT {price}.{robloxIdLine} {url}",
+    whatsappTemplateRobux: "Hi {brand}, {amount} Robux â€” BDT {price}.{robloxIdLine} {url}",
     version: put.body.version,
   });
   assert.equal(putWa.status, 200);
   assert.equal(putWa.body.whatsappNumber, "8801700000000");
-  assert.equal(putWa.body.whatsappTemplateProduct, "Hi {brand}, I want {name} x{qty} — BDT {price}.{robloxIdLine} {url}");
-  assert.equal(putWa.body.whatsappTemplateRobux, "Hi {brand}, {amount} Robux — BDT {price}.{robloxIdLine} {url}");
+  assert.equal(putWa.body.whatsappTemplateProduct, "Hi {brand}, I want {name} x{qty} â€” BDT {price}.{robloxIdLine} {url}");
+  assert.equal(putWa.body.whatsappTemplateRobux, "Hi {brand}, {amount} Robux â€” BDT {price}.{robloxIdLine} {url}");
 
   const longTpl = await owner.request("PUT", "/api/v1/admin/settings", {
     whatsappTemplateProduct: "x".repeat(1001),
@@ -502,8 +507,8 @@ test("settings: partial updates merge, validation + version guards apply", async
   assert.ok(dvNow > dvBefore);
   assert.equal(fresh.body.whatsappNumber, "8801700000000");
   assert.deepEqual(fresh.body.whatsappTemplates, {
-    product: "Hi {brand}, I want {name} x{qty} — BDT {price}.{robloxIdLine} {url}",
-    robux: "Hi {brand}, {amount} Robux — BDT {price}.{robloxIdLine} {url}",
+    product: "Hi {brand}, I want {name} x{qty} â€” BDT {price}.{robloxIdLine} {url}",
+    robux: "Hi {brand}, {amount} Robux â€” BDT {price}.{robloxIdLine} {url}",
   });
   const stale = await c.request("GET", "/api/v1/bootstrap", undefined, {
     headers: { "if-none-match": 'W/"dv' + dvBefore + '"' },
@@ -573,11 +578,20 @@ test("guides: list + version-guarded patch", async () => {
   assert.equal(noVersion.status, 428);
 
   const ok = await owner.request("PATCH", "/api/v1/admin/guides/robux", {
-    tagline: { en: "Robux guide", bn: "রোবক্স গাইড" },
+    tagline: { en: "Robux guide", bn: "à¦°à§‹à¦¬à¦•à§à¦¸ à¦—à¦¾à¦‡à¦¡" },
     version: robux.version,
   });
   assert.equal(ok.status, 200);
   assert.equal(ok.body.version, robux.version + 1);
+
+  /* Attribute-breaking URLs never reach the database. */
+  const evil = await owner.request("PATCH", "/api/v1/admin/guides/robux", {
+    content: {
+      links: [{ label: { en: "x" }, url: "https://www.roblox.com/\" onmouseover=\"alert(1)" }],
+    },
+    version: ok.body.version,
+  });
+  assert.equal(evil.status, 422);
 });
 
 /* ---------- Hardening: lockout, rate limits, page gate ---------- */
@@ -640,6 +654,36 @@ test("static serving, admin page gate, and security headers", async () => {
   assert.equal((await c.request("GET", "/server/db.js")).status, 404);
   assert.equal((await c.request("GET", "/package.json")).status, 404);
   assert.equal((await c.request("GET", "/api/v1/nope")).status, 404);
+
+  /* Percent-encoded paths must not bypass the static allow-list or the gate. */
+  const encoded = [
+    "/server%2Fconfig.js",
+    "/%73erver/db.js",
+    "/server%2fdata%2fbloxbazaar.db",
+    "/node_modules%2Fexpress%2Fpackage.json",
+    "/README.md",
+    "/docs/project-overview.md",
+    "/assets/..%2fpackage.json",
+    "/assets/%2e%2e%2fserver%2fconfig.js",
+    "/uploads/%2e%2e%2fserver%2fconfig.js",
+  ];
+  for (const p of encoded) {
+    assert.equal((await c.request("GET", p)).status, 404, p + " must not be served");
+  }
+  assert.equal((await c.request("GET", "/assets/js/site.js")).status, 200);
+
+  for (const p of ["/admin%2Ehtml", "/%61dmin.html", "/ADMIN.HTML", "/assets/..%2fadmin.html"]) {
+    const r = await c.request("GET", p);
+    assert.equal(r.status, 302, p + " must still be gated");
+    assert.ok(String(r.headers.get("location")).startsWith("/admin-login.html?next="));
+  }
+
+  /* Private responses must not be cached or bfcache-restorable. */
+  const privateSession = await c.request("GET", "/api/v1/admin/session");
+  assert.equal(privateSession.headers.get("cache-control"), "no-store");
+  const authedGate = await owner.request("GET", "/admin%2Ehtml");
+  assert.equal(authedGate.status, 200);
+  assert.equal(authedGate.headers.get("cache-control"), "no-store");
 });
 
 test("sign-out destroys the session", async () => {
@@ -658,9 +702,9 @@ test("full CRUD lifecycle: create with monogram, update cross-field rules, filte
 
   // 1. CREATE product without image -> verify monogram generated from initials
   const createRes = await c.request("POST", "/api/v1/admin/products", {
-    name: { en: "Mystic Shadow Cloak", bn: "রহস্যময় ছায়া চাদর" },
-    short: { en: "A rare cloak", bn: "একটি বিরল চাদর" },
-    description: { en: "Full description of mystic shadow cloak.", bn: "রহস্যময় ছায়া চাদরের বিস্তারিত বিবরণ।" },
+    name: { en: "Mystic Shadow Cloak", bn: "à¦°à¦¹à¦¸à§à¦¯à¦®à¦¯à¦¼ à¦›à¦¾à¦¯à¦¼à¦¾ à¦šà¦¾à¦¦à¦°" },
+    short: { en: "A rare cloak", bn: "à¦à¦•à¦Ÿà¦¿ à¦¬à¦¿à¦°à¦² à¦šà¦¾à¦¦à¦°" },
+    description: { en: "Full description of mystic shadow cloak.", bn: "à¦°à¦¹à¦¸à§à¦¯à¦®à¦¯à¦¼ à¦›à¦¾à¦¯à¦¼à¦¾ à¦šà¦¾à¦¦à¦°à§‡à¦° à¦¬à¦¿à¦¸à§à¦¤à¦¾à¦°à¦¿à¦¤ à¦¬à¦¿à¦¬à¦°à¦£à¥¤" },
     category: "robux",
     price: 300,
     listPrice: 400,
@@ -739,9 +783,9 @@ test("persistence across server restart: SQLite data survives server shutdown an
 
   // CREATE product
   let createRes = await client.request("POST", "/api/v1/admin/products", {
-    name: { en: "Persistent Dragon Sword", bn: "ড্রাগন তরবারি" },
-    short: { en: "Will survive server restart", bn: "সার্ভার রিস্টার্টেও টিকবে" },
-    description: { en: "A sword that proves persistence.", bn: "স্থায়িত্ব প্রমাণকারী তরবারি।" },
+    name: { en: "Persistent Dragon Sword", bn: "à¦¡à§à¦°à¦¾à¦—à¦¨ à¦¤à¦°à¦¬à¦¾à¦°à¦¿" },
+    short: { en: "Will survive server restart", bn: "à¦¸à¦¾à¦°à§à¦­à¦¾à¦° à¦°à¦¿à¦¸à§à¦Ÿà¦¾à¦°à§à¦Ÿà§‡à¦“ à¦Ÿà¦¿à¦•à¦¬à§‡" },
+    description: { en: "A sword that proves persistence.", bn: "à¦¸à§à¦¥à¦¾à¦¯à¦¼à¦¿à¦¤à§à¦¬ à¦ªà§à¦°à¦®à¦¾à¦£à¦•à¦¾à¦°à§€ à¦¤à¦°à¦¬à¦¾à¦°à¦¿à¥¤" },
     category: "blox-fruits",
     price: 1500,
   });
@@ -799,3 +843,254 @@ test("persistence across server restart: SQLite data survives server shutdown an
   testDb.close();
 });
 
+
+/* ---------- Admin accounts & password recovery ---------- */
+
+async function addAdminViaOwner(email, password, role) {
+  const res = await owner.request("POST", "/api/v1/admin/admins", {
+    email: email,
+    password: password,
+    role: role || "editor",
+  });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  return res.body;
+}
+
+test("admin management: owners list, add, and disable admins; editors are denied", async () => {
+  const list = await owner.request("GET", "/api/v1/admin/admins");
+  assert.equal(list.status, 200);
+  const ownerItem = list.body.items.find((a) => a.email === OWNER.email);
+  assert.ok(ownerItem);
+  assert.equal(ownerItem.role, "owner");
+  assert.equal(ownerItem.hasRecovery, false);
+  assert.equal(typeof ownerItem.active, "boolean");
+  assert.ok(!("password_hash" in ownerItem), "password hashes never leave the server");
+  assert.ok(!("recovery_hash" in ownerItem), "recovery hashes never leave the server");
+
+  const email = "team-editor@bloxbazaar.local";
+  const added = await addAdminViaOwner(email, "TeamPass@2026");
+  assert.equal(added.admin.role, "editor");
+  assert.equal(added.admin.active, true);
+  assert.match(added.recoveryCode, /^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+
+  const duplicate = await owner.request("POST", "/api/v1/admin/admins", {
+    email: email.toUpperCase(),
+    password: "AnotherPass@2026",
+    role: "editor",
+  });
+  assert.equal(duplicate.status, 409);
+
+  const weak = await owner.request("POST", "/api/v1/admin/admins", {
+    email: "weak-admin@bloxbazaar.local",
+    password: "short",
+    role: "editor",
+  });
+  assert.equal(weak.status, 422);
+  assert.ok((weak.body.errors || []).some((e) => e.field === "password"));
+
+  const badRole = await owner.request("POST", "/api/v1/admin/admins", {
+    email: "role-admin@bloxbazaar.local",
+    password: "RolePass@2026",
+    role: "superuser",
+  });
+  assert.equal(badRole.status, 422);
+
+  const editor = newClient();
+  assert.equal((await signIn(editor, EDITOR.email, EDITOR.password)).status, 200);
+  assert.equal((await editor.request("GET", "/api/v1/admin/admins")).status, 403);
+  assert.equal((await editor.request("POST", "/api/v1/admin/admins", {
+    email: "editor-created@bloxbazaar.local",
+    password: "EditorPass@2026",
+    role: "editor",
+  })).status, 403);
+
+  const id = added.admin.id;
+  const off = await owner.request("PATCH", "/api/v1/admin/admins/" + id, { active: false });
+  assert.equal(off.status, 200);
+  assert.equal(off.body.admin.active, false);
+  assert.equal((await signIn(newClient(), email, "TeamPass@2026")).status, 401);
+
+  const on = await owner.request("PATCH", "/api/v1/admin/admins/" + id, { active: true });
+  assert.equal(on.status, 200);
+  assert.equal(on.body.admin.active, true);
+  assert.equal((await signIn(newClient(), email, "TeamPass@2026")).status, 200);
+
+  const session = await owner.request("GET", "/api/v1/admin/session");
+  const selfOff = await owner.request("PATCH", "/api/v1/admin/admins/" + session.body.admin.id, {
+    active: false,
+  });
+  assert.equal(selfOff.status, 422);
+
+  const demote = await owner.request("PATCH", "/api/v1/admin/admins/" + session.body.admin.id, {
+    role: "editor",
+  });
+  assert.equal(demote.status, 422);
+  assert.equal(demote.body.title, "Owner required");
+
+  /* Delete guards: self is blocked, editors are denied, delete is permanent. */
+  const selfDelete = await owner.request("DELETE", "/api/v1/admin/admins/" + session.body.admin.id);
+  assert.equal(selfDelete.status, 422);
+  assert.equal(selfDelete.body.title, "Cannot delete yourself");
+
+  assert.equal((await editor.request("DELETE", "/api/v1/admin/admins/" + id)).status, 403);
+
+  const removed = await owner.request("DELETE", "/api/v1/admin/admins/" + id);
+  assert.equal(removed.status, 204);
+  assert.equal((await signIn(newClient(), email, "TeamPass@2026")).status, 401);
+  const afterDelete = await owner.request("GET", "/api/v1/admin/admins");
+  assert.ok(!afterDelete.body.items.some((a) => a.id === id), "deleted admin leaves the list");
+  assert.equal((await owner.request("DELETE", "/api/v1/admin/admins/" + id)).status, 404);
+});
+
+test("account: change email and password; other sessions are revoked", async () => {
+  const email = "account-test@bloxbazaar.local";
+  const newEmail = "account-test-new@bloxbazaar.local";
+  const finalEmail = "account-test-final@bloxbazaar.local";
+  const oldPassword = "AccountPass@2026";
+  const newPassword = "AccountNewPass@2026";
+  await addAdminViaOwner(email, oldPassword);
+
+  const c1 = newClient();
+  const c2 = newClient();
+  assert.equal((await signIn(c1, email, oldPassword)).status, 200);
+  assert.equal((await signIn(c2, email, oldPassword)).status, 200);
+
+  const noChange = await c1.request("POST", "/api/v1/admin/account", {
+    email: email,
+    currentPassword: oldPassword,
+    newPassword: "",
+  });
+  assert.equal(noChange.status, 422);
+
+  const wrong = await c1.request("POST", "/api/v1/admin/account", {
+    email: newEmail,
+    currentPassword: "WrongPass@2026",
+    newPassword: newPassword,
+  });
+  assert.equal(wrong.status, 403);
+  assert.ok((wrong.body.errors || []).some((e) => e.field === "currentPassword"));
+
+  const changed = await c1.request("POST", "/api/v1/admin/account", {
+    email: newEmail,
+    currentPassword: oldPassword,
+    newPassword: newPassword,
+  });
+  assert.equal(changed.status, 200, JSON.stringify(changed.body));
+  assert.equal(changed.body.passwordChanged, true);
+  assert.equal(changed.body.admin.email, newEmail);
+
+  const selfSession = await c1.request("GET", "/api/v1/admin/session");
+  assert.equal(selfSession.status, 200);
+  assert.equal(selfSession.body.admin.email, newEmail);
+  assert.equal((await c2.request("GET", "/api/v1/admin/session")).status, 401);
+
+  assert.equal((await signIn(newClient(), email, oldPassword)).status, 401);
+  assert.equal((await signIn(newClient(), newEmail, oldPassword)).status, 401);
+  assert.equal((await signIn(newClient(), newEmail, newPassword)).status, 200);
+
+  const emailOnly = await c1.request("POST", "/api/v1/admin/account", {
+    email: finalEmail,
+    currentPassword: newPassword,
+    newPassword: "",
+  });
+  assert.equal(emailOnly.status, 200);
+  assert.equal(emailOnly.body.passwordChanged, false);
+  assert.equal(emailOnly.body.admin.email, finalEmail);
+
+  const taken = await c1.request("POST", "/api/v1/admin/account", {
+    email: OWNER.email,
+    currentPassword: newPassword,
+    newPassword: "",
+  });
+  assert.equal(taken.status, 409);
+});
+
+test("recovery code: one-time reset rotates the code, revokes sessions, and locks out guesses", async () => {
+  const email = "recover-test@bloxbazaar.local";
+  const oldPassword = "RecoverPass@2026";
+  const newPassword = "RecoverNewPass@2026";
+  await addAdminViaOwner(email, oldPassword);
+
+  const c1 = newClient();
+  assert.equal((await signIn(c1, email, oldPassword)).status, 200);
+
+  const wrongCurrent = await c1.request("POST", "/api/v1/admin/account/recovery", {
+    currentPassword: "WrongPass@2026",
+  });
+  assert.equal(wrongCurrent.status, 403);
+
+  const generated = await c1.request("POST", "/api/v1/admin/account/recovery", {
+    currentPassword: oldPassword,
+  });
+  assert.equal(generated.status, 200);
+  const code1 = generated.body.recoveryCode;
+  assert.match(code1, /^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+
+  const session = await c1.request("GET", "/api/v1/admin/session");
+  assert.equal(session.body.admin.hasRecovery, true);
+
+  const c2 = newClient();
+  assert.equal((await signIn(c2, email, oldPassword)).status, 200);
+
+  const weak = await newClient().request("POST", "/api/v1/admin/password/recover", {
+    email: email,
+    recoveryCode: code1,
+    password: "short",
+  });
+  assert.equal(weak.status, 422);
+
+  const wrong = await newClient().request("POST", "/api/v1/admin/password/recover", {
+    email: email,
+    recoveryCode: "AAAA-BBBB-CCCC",
+    password: newPassword,
+  });
+  assert.equal(wrong.status, 401);
+  assert.equal(wrong.body.detail, "Incorrect email or recovery code.");
+
+  const ok = await newClient().request("POST", "/api/v1/admin/password/recover", {
+    email: email,
+    recoveryCode: code1,
+    password: newPassword,
+  });
+  assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  const code2 = ok.body.recoveryCode;
+  assert.notEqual(code2, code1);
+  assert.match(code2, /^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+
+  assert.equal((await c1.request("GET", "/api/v1/admin/session")).status, 401);
+  assert.equal((await c2.request("GET", "/api/v1/admin/session")).status, 401);
+  assert.equal((await signIn(newClient(), email, oldPassword)).status, 401);
+  assert.equal((await signIn(newClient(), email, newPassword)).status, 200);
+
+  const reuse = await newClient().request("POST", "/api/v1/admin/password/recover", {
+    email: email,
+    recoveryCode: code1,
+    password: "AnotherPass@2026",
+  });
+  assert.equal(reuse.status, 401, "the old recovery code must be dead");
+
+  const second = await newClient().request("POST", "/api/v1/admin/password/recover", {
+    email: email,
+    recoveryCode: code2,
+    password: "AnotherPass@2026",
+  });
+  assert.equal(second.status, 200);
+  const code3 = second.body.recoveryCode;
+
+  /* Five bad guesses lock the account even when a valid code follows. */
+  let last;
+  for (let i = 0; i < 5; i += 1) {
+    last = await newClient().request("POST", "/api/v1/admin/password/recover", {
+      email: email,
+      recoveryCode: "ZZZZ-ZZZZ-ZZZZ",
+      password: "AnotherPass@2026",
+    });
+  }
+  assert.equal(last.status, 429);
+  const lockedOut = await newClient().request("POST", "/api/v1/admin/password/recover", {
+    email: email,
+    recoveryCode: code3,
+    password: "FinalPass@2026",
+  });
+  assert.equal(lockedOut.status, 429);
+});

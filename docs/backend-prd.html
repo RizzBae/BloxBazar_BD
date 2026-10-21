@@ -251,7 +251,7 @@ li.ck{list-style:none;margin-left:-16px}
 <li><strong>Owner</strong> — full access: products, prices, stock, eligibility, settings, guides, audit, admin accounts.</li>
 <li><strong>Editor</strong> — day-to-day operations: create/edit products, prices, stock, images; publish/unpublish; cannot change eligibility, settings, or admin accounts.</li>
 </ul>
-<p>No public admin registration. Accounts are created by the Owner, require MFA, and are <strong>disabled</strong> (not deleted) when no longer needed. See Appendix C for the permission matrix.</p>
+<p>No public admin registration. Accounts are created by the Owner, require MFA, and are <strong>disabled</strong> when no longer needed (hard delete exists behind owner-only guards and an audit record). See Appendix C for the permission matrix.</p>
 <h3 id="5-2-entities">5.2 Entities</h3>
 <p>Field names below are the canonical backend names; the public API mirrors them (Appendix A) so the shipped front-end can switch data sources without redesign.</p>
 <p><strong>Product</strong></p>
@@ -557,7 +557,7 @@ li.ck{list-style:none;margin-left:-16px}
 <h2 id="10-security-requirements">10. Security requirements</h2>
 <p><strong>Baseline:</strong> OWASP ASVS 5.0.0 [S5], Level 1 fully and Level 2 for authentication, session, and access-control items; track OWASP Top 10:2025 [S6] (A01 is Broken Access Control).</p>
 <ul>
-<li><strong>AuthN:</strong> managed provider, MFA required (TOTP at minimum; passkeys where the provider supports them); recovery codes stored offline by the owner; accounts disabled, not deleted.</li>
+<li><strong>AuthN:</strong> managed provider, MFA required (TOTP at minimum; passkeys where the provider supports them); recovery codes stored offline by the owner; accounts disabled or deleted (guarded and audited).</li>
 <li><strong>Sessions:</strong> <code>__Host-</code> prefixed cookie, <code>HttpOnly</code>, <code>Secure</code>, <code>SameSite=Lax</code>; idle 12 h; absolute ≤ 30 days with &quot;keep me signed in&quot;; rotate on privilege change; revoke all sessions on password/MFA change.</li>
 <li><strong>CSRF:</strong> cookie sessions require double-submit CSRF tokens on all state-changing routes plus an <code>Origin</code>/<code>Referer</code> check.</li>
 <li><strong>AuthZ:</strong> check the role on the <strong>server</strong> for every protected route; deny by default; no object enumeration (admin routes never expose another tenant's data — single shop here, but keep the pattern).</li>
@@ -571,7 +571,7 @@ li.ck{list-style:none;margin-left:-16px}
 <li><strong>Data at rest:</strong> provider encryption; database not publicly reachable; least-privilege database credentials for the app only.</li>
 </ul>
 <blockquote>
-<p><strong>Safeguard</strong> — The current static site's client-side admin gate (SHA-256 password in <code>config.js</code>) is a design-stage stand-in and <strong>must not exist in the production deployment</strong>. Production admin access is authenticated on the server only.</p>
+<p><strong>Safeguard</strong> — The prototype's client-side admin gate (SHA-256 password in <code>config.js</code>) was a design-stage stand-in; it <strong>does not exist in the shipped build</strong>. Production admin access is authenticated on the server only.</p>
 </blockquote>
 <h2 id="11-reliability-recovery-and-error-handling">11. Reliability, recovery, and error handling</h2>
 <ul>
@@ -674,7 +674,7 @@ li.ck{list-style:none;margin-left:-16px}
 <li><strong>Add a data layer</strong> — <code>assets/js/api.js</code> with a source flag (<code>BB_DATA_SOURCE = &quot;api&quot; | &quot;static&quot;</code>). It fetches <code>/bootstrap</code> + <code>/catalogue</code> + <code>/products/{id}</code> (+ guides) and exposes the same <code>BB_DATA</code>-shaped object the pages already consume.</li>
 <li><strong>Verify parity page-by-page</strong> — home (tiles, featured), catalogue (filters, chips, counts, states), product page (picker, order link, out-of-stock), guides, contact; compare against production static build.</li>
 <li><strong>Flip the default</strong> to <code>api</code>; keep <code>static</code> as the fallback until the backend is stable for one release cycle.</li>
-<li><strong>Retire the admin prototype</strong> — <code>admin.html</code>/<code>admin-login.js</code> wire to the real API; the client-side SHA-256 gate and <code>localStorage</code> store (<code>bb_admin_v1</code>, <code>bb_admin_session</code>, <code>bb_admin_try</code>) are removed from production builds.</li>
+<li><strong>Retire the admin prototype</strong> — <code>admin.html</code>/<code>admin-login.js</code> wire to the real API; the client-side SHA-256 gate and <code>localStorage</code> store (<code>bb_admin_v1</code>, <code>bb_admin_session</code>, <code>bb_admin_try</code>) have been removed from the shipped build.</li>
 <li><strong>Keep deep links</strong> — <code>?category=</code>, <code>?cat=</code>, <code>?id=</code>, and the <code>?state=</code> previews keep working (previews may remain dev-only via the static fallback).</li>
 </ol>
 <p>Rollback: set the flag back to <code>static</code>. Once the backend is the source of truth, admin edits happen only there — the seed script is one-way and re-runnable idempotently.</p>

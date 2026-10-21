@@ -16,15 +16,42 @@ const publicRoutes = require("./routes/public");
 const adminRoutes = require("./routes/admin");
 const pkg = require("../package.json");
 
-/* Paths that must never be served by the static handler. */
-const BLOCKED = [
-  /^\/server(\/|$)/i,
-  /^\/node_modules(\/|$)/i,
-  /^\/\.git(\/|$)/i,
-  /^\/\.env$/i,
-  /^\/package(-lock)?\.json$/i,
-  /^\/\.gitignore$/i,
-];
+/* Resolve a request path the same way the static file handler will. Express
+   keeps percent-encoding in req.path, while express.static decodes it, so a
+   raw-path blocklist can be bypassed with /server%2Fconfig.js. Decode and
+   normalize first, then allow only storefront files. */
+function decodePath(raw) {
+  let value = String(raw || "");
+  for (let i = 0; i < 3; i += 1) {
+    let next;
+    try { next = decodeURIComponent(value); } catch (e) { break; }
+    if (next === value) break;
+    value = next;
+  }
+  return value.replace(/\\/g, "/").replace(/\0/g, "");
+}
+
+function normalizedPath(raw) {
+  const clean = decodePath(raw).split("?")[0].split("#")[0];
+  let value = path.posix.normalize(clean);
+  if (!value.startsWith("/")) value = "/" + value;
+  return value;
+}
+
+/* The static site is a fixed set of root HTML pages plus /assets. Everything
+   else (server source, database, dependencies, docs, package metadata) is
+   never reachable through the web server. */
+function isPublicStaticPath(raw) {
+  const value = normalizedPath(raw).toLowerCase();
+  if (value === "/") return true;
+  if (/^\/[a-z0-9_-]+\.html$/.test(value)) return true;
+  return value.startsWith("/assets/");
+}
+
+function isUploadPath(raw) {
+  const value = normalizedPath(raw);
+  return /^\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:jpg|png|webp)$/i.test(value);
+}
 
 function createApp(options) {
   const db = options.db;
@@ -41,6 +68,7 @@ function createApp(options) {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
     res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
     res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
     res.setHeader("Content-Security-Policy", [
       "default-src 'self'",
@@ -69,37 +97,48 @@ function createApp(options) {
   app.use("/api/v1", publicRoutes(db, config));
   app.use("/api/v1/admin", adminRoutes(db, config));
 
-  /* Uploaded images: random immutable keys, long-lived caching (PRD §12). */
-  app.use("/uploads", express.static(config.uploadsDir, {
+  /* Uploaded images: random immutable keys, long-lived caching. Only files
+     matching the generated UUID name are served, which also stops encoded
+     path traversal through the uploads mount. */
+  app.use("/uploads", function (req, res, next) {
+    if (!isUploadPath(req.url)) {
+      return res.status(404).type("text/plain").send("Not found");
+    }
+    next();
+  }, express.static(config.uploadsDir, {
     index: false,
     dotfiles: "ignore",
     maxAge: "365d",
     immutable: true,
   }));
 
+  /* One server-side gate for the admin page, matched after decoding. This
+     covers /admin%2Ehtml, case variants, and /assets/../admin.html. */
   app.use(function (req, res, next) {
-    if (BLOCKED.some(function (re) { return re.test(req.path); })) {
-      return sendProblem(res, 404, "Not found", "Nothing here.");
-    }
-    next();
-  });
-
-  /* Server-side gate for the admin page (PRD §10): the client UI is
-     useless without a session anyway, but the page itself is gated too. */
-  app.get("/admin.html", function (req, res, next) {
+    if (req.method !== "GET" && req.method !== "HEAD") return next();
+    if (normalizedPath(req.path).toLowerCase() !== "/admin.html") return next();
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Pragma", "no-cache");
     if (!loadSession(db, req, config)) {
-      return res.redirect(302, "/admin-login.html?next=" + encodeURIComponent(req.originalUrl));
+      return res.redirect(302, "/admin-login.html?next=" + encodeURIComponent("/admin.html"));
     }
     next();
   });
 
-  /* Static site (the same files the design stage shipped). */
+  /* Static storefront: root HTML pages and /assets only. */
+  app.use(function (req, res, next) {
+    if (req.method !== "GET" && req.method !== "HEAD") return next();
+    if (req.path === "/api" || req.path.indexOf("/api/") === 0) return next();
+    if (!isPublicStaticPath(req.path)) {
+      return res.status(404).type("text/plain").send("Not found");
+    }
+    next();
+  });
+
   app.use(express.static(config.rootDir, {
     index: "index.html",
     dotfiles: "ignore",
     setHeaders: function (res, filePath) {
-      /* Assets revalidate so local admin edits show immediately; a CDN
-         in front adds the long-lived caching described in PRD §12. */
       if (filePath.indexOf(path.sep + "assets" + path.sep) !== -1) {
         res.setHeader("Cache-Control", "no-cache");
       }

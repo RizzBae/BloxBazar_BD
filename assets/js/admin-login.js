@@ -1,17 +1,12 @@
 /* =========================================================
    BloxBazaar BD — admin-login.js
-   Owner sign-in.
+   Admin sign-in.
 
-   Backend mode: posts email + password to /api/v1/admin/session;
-   the server checks the scrypt hash, applies the sign-in lockout
-   (5 wrong tries → escalating lockout), and sets the HttpOnly
-   session cookie. The client shows the server's rate-limit state.
-
-   Static mode (file:// design preview): the original SHA-256
-   gate from config.js with a browser-only session — a static
-   site cannot enforce real security.
-
-   Preview: admin-login.html?state=error shows the error state.
+   The form posts email + password to /api/v1/admin/session. The
+   server verifies the scrypt hash, applies the sign-in lockout,
+   and sets the HttpOnly session cookie; there is no password
+   check in the browser. Without the backend the page shows a
+   notice instead of a form.
    ========================================================= */
 
 (function () {
@@ -20,7 +15,7 @@
   var T = window.BB;
   var API = window.BB_API;
 
-  function apiMode() { return !!(API && API.mode && API.mode() === "api"); }
+  function backendAvailable() { return !!(API && API.mode && API.mode() === "api"); }
 
   var form = document.getElementById("login-form");
   var emailField = document.getElementById("f-email");
@@ -32,9 +27,9 @@
   var pwToggle = document.getElementById("pw-toggle");
   var rememberInput = document.getElementById("login-remember");
   var submitBtn = form.querySelector('button[type="submit"]');
-
-  var demoError = T.param("state") === "error";
-  if (demoError) errorBanner.classList.add("is-visible");
+  var options = document.querySelector(".login-options");
+  var privateNote = document.querySelector(".login-note");
+  var backendNote = document.getElementById("backend-note");
 
   var lockTimer = null;
   var serverLockUntil = 0;
@@ -50,12 +45,17 @@
     return next.indexOf("admin.html") === 0 ? next : "admin.html";
   }
 
-  /* Lockout countdown: server-issued (Retry-After) in backend mode,
-     the browser-only counter in the static demo. */
+  function showBackendRequired() {
+    form.hidden = true;
+    if (options) options.hidden = true;
+    if (privateNote) privateNote.hidden = true;
+    if (backendNote) backendNote.hidden = false;
+    hideError();
+  }
+
+  /* Lockout countdown from the server's Retry-After. */
   function applyLock() {
-    var remain = 0;
-    if (serverLockUntil > Date.now()) remain = serverLockUntil - Date.now();
-    else if (!apiMode()) remain = T.adminLockRemaining();
+    var remain = serverLockUntil > Date.now() ? serverLockUntil - Date.now() : 0;
 
     if (remain <= 0) {
       if (lockTimer) { clearInterval(lockTimer); lockTimer = null; }
@@ -72,7 +72,6 @@
     }
     return true;
   }
-  applyLock();
 
   /* Password visibility */
   pwToggle.addEventListener("click", function () {
@@ -92,6 +91,8 @@
     if (submitBtn.disabled) return;
     hideError();
 
+    if (!backendAvailable()) { showBackendRequired(); return; }
+
     var emailOk = /.+@.+\..+/.test(emailInput.value.trim());
     var pwOk = pwInput.value.length > 0;
 
@@ -101,54 +102,30 @@
     if (!emailOk) { emailInput.focus(); return; }
     if (!pwOk) { pwInput.focus(); return; }
 
-    /* Designed error state — stays on the page for review */
-    if (demoError) { showError(T.t("admin.demoError")); return; }
-
     submitBtn.disabled = true;
     var remember = !!(rememberInput && rememberInput.checked);
 
-    /* ---------- Backend mode: real server auth ---------- */
-    if (apiMode()) {
-      API.admin.signIn(emailInput.value.trim(), pwInput.value, remember).then(function () {
-        location.href = nextTarget();
-      }).catch(function (err) {
-        submitBtn.disabled = false;
-        pwInput.select();
-        if (err && err.status === 429) {
-          var secs = Number(err.retryAfter || 0);
-          serverLockUntil = Date.now() + (secs > 0 ? secs * 1000 : 15 * 60 * 1000);
-          applyLock();
-          return;
-        }
-        if (err && err.status === 401) { showError(T.t("admin.demoError")); return; }
-        showError(T.t("admin.signInNetwork"));
-      });
-      return;
-    }
-
-    /* ---------- Static demo: browser-only gate ---------- */
-    T.adminSignIn(pwInput.value, remember).then(function () {
+    API.admin.signIn(emailInput.value.trim(), pwInput.value, remember).then(function () {
       location.href = nextTarget();
     }).catch(function (err) {
       submitBtn.disabled = false;
       pwInput.select();
-      var msg = String((err && err.message) || "");
-      if (msg.indexOf("locked:") === 0) { applyLock(); return; }
-      if (msg === "insecure-context") { showError(T.t("admin.insecure")); return; }
-      if (msg === "not-configured") { showError(T.t("admin.notConfigured")); return; }
-      showError(T.t("admin.demoError"));
+      if (err && err.status === 429) {
+        var secs = Number(err.retryAfter || 0);
+        serverLockUntil = Date.now() + (secs > 0 ? secs * 1000 : 15 * 60 * 1000);
+        applyLock();
+        return;
+      }
+      if (err && err.status === 401) { showError(T.t("admin.invalidCredentials")); return; }
+      showError(T.t("admin.signInNetwork"));
     });
   });
 
   /* Already signed in? Skip the form once the data layer knows the mode. */
   document.addEventListener("bb:ready", function () {
-    if (apiMode()) {
-      API.admin.session().then(function () {
-        location.replace(nextTarget());
-      }).catch(function () { /* not signed in — show the form */ });
-      return;
-    }
-    if (T.adminSessionActive()) { location.replace(nextTarget()); return; }
-    applyLock();
+    if (!backendAvailable()) { showBackendRequired(); return; }
+    API.admin.session().then(function () {
+      location.replace(nextTarget());
+    }).catch(function () { /* not signed in — show the form */ });
   });
 })();

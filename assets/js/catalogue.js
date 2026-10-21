@@ -56,7 +56,7 @@
     chipsEl.innerHTML = items.map(function (it) {
       var active = state.cat === it.id ? " is-active" : "";
       var cat = it.id === "all" ? "" : C.catClass(it.id);
-      return '<button type="button" class="chip' + cat + active + '" data-cat="' + it.id + '" aria-pressed="' + (state.cat === it.id) + '">' +
+      return '<button type="button" class="chip' + cat + active + '" data-cat="' + T.esc(it.id) + '" aria-pressed="' + (state.cat === it.id) + '">' +
         (cat ? '<span class="cat-dot' + cat + '"></span>' : "") +
         T.esc(it.label) + ' <span class="chip-count">' + (T.getLang() === "bn" ? T.toBnDigits(it.count) : it.count) + "</span></button>";
     }).join("");

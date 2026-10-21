@@ -37,14 +37,25 @@ function isPlainObject(v) {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
-function allowedHttpsUrl(url) {
+/* External guide links are rendered into an href, so reject anything that can
+   break out of the attribute, then return the canonical URL for storage. */
+function safeHttpsUrl(url) {
+  const raw = String(url);
+  if (/[\u0000-\u0020\u007f"'<>`\\]/.test(raw)) return "";
+  let u;
   try {
-    const u = new URL(url);
-    if (u.protocol !== "https:") return false;
-    return GUIDE_LINK_HOSTS.some((h) => u.hostname === h || u.hostname.endsWith("." + h));
+    u = new URL(raw);
   } catch (e) {
-    return false;
+    return "";
   }
+  if (u.protocol !== "https:") return "";
+  if (u.username || u.password) return "";
+  if (!GUIDE_LINK_HOSTS.some((h) => u.hostname === h || u.hostname.endsWith("." + h))) return "";
+  return u.href;
+}
+
+function allowedHttpsUrl(url) {
+  return safeHttpsUrl(url) !== "";
 }
 
 /* ---------------------------------------------------------
@@ -505,9 +516,14 @@ function validateGuidePatch(body) {
         else {
           c.ways.forEach(function (w) {
             if (!isPlainObject(w)) { err("content", "Each way must be an object."); bad = true; return; }
-            if (w.link && !w.internal && !allowedHttpsUrl(w.link)) {
-              err("content", "Way links must be https on an allow-listed domain (Roblox or similar).");
-              bad = true;
+            if (w.link && !w.internal) {
+              const safe = safeHttpsUrl(w.link);
+              if (!safe) {
+                err("content", "Way links must be https on an allow-listed domain (Roblox or similar).");
+                bad = true;
+              } else {
+                w.link = safe;
+              }
             }
             if (w.link && w.internal && !INTERNAL_LINK_RE.test(String(w.link))) {
               err("content", "Internal links must point at a local .html page.");
@@ -520,9 +536,12 @@ function validateGuidePatch(body) {
         if (!Array.isArray(c.links)) { err("content", "links must be a list."); bad = true; }
         else {
           c.links.forEach(function (l) {
-            if (!isPlainObject(l) || !allowedHttpsUrl(l.url)) {
+            const safe = isPlainObject(l) ? safeHttpsUrl(l.url) : "";
+            if (!safe) {
               err("content", "Guide links must be https on an allow-listed domain (Roblox or similar).");
               bad = true;
+            } else {
+              l.url = safe;
             }
           });
         }
@@ -547,4 +566,5 @@ module.exports = {
   validateSettings,
   validateGuidePatch,
   allowedHttpsUrl,
+  safeHttpsUrl,
 };

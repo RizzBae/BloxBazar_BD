@@ -30,7 +30,7 @@
             </div>
             <h3 data-i18n="contact.waTitle">WhatsApp (fastest)</h3>
             <p data-i18n="contact.waDesc">Message us about an item or an order. A prepared message is ready — review it before sending.</p>
-            <span class="placeholder-chip">[WhatsApp number to be added]</span>
+            <span class="contact-value" id="contact-wa" hidden></span>
             <a class="btn btn-wa" id="wa-support" href="#" target="_blank" rel="noopener">
               <svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884"/></svg>
               <span data-i18n="cta.openWaChat">Open WhatsApp chat</span>
@@ -44,13 +44,13 @@
             </div>
             <h3 data-i18n="contact.emailTitle">Email</h3>
             <p data-i18n="contact.emailDesc">For anything that isn't urgent, or if WhatsApp is unavailable.</p>
-            <span class="placeholder-chip">[Support email to be added]</span>
-            <div class="flex items-center gap-2.5 mt-4 text-ink-2 text-sm">
+            <p class="contact-value" id="contact-email-row" hidden><a id="contact-email"></a></p>
+            <div class="flex items-center gap-2.5 mt-4 text-ink-2 text-sm" id="contact-hours-row" hidden>
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
               <span data-i18n="contact.hoursTitle">Support hours</span>
-              <span class="placeholder-chip">[Support hours to be added]</span>
+              <span class="contact-value" id="contact-hours"></span>
             </div>
-            <p class="text-xs text-ink-3 mt-2" data-i18n="contact.hoursDesc">Placeholder — the shop owner will confirm real support hours.</p>
+            <p class="text-xs text-ink-3 mt-2" id="contact-hours-desc" data-i18n="contact.hoursDesc" hidden>Bangladesh time (GMT+6). We reply as soon as we can.</p>
           </div>
         </div>
 
@@ -67,18 +67,16 @@
           </div>
 
           <div class="card policy-block anchor-offset" id="privacy">
-            <h2 data-i18n="contact.privacyTitle">Privacy — plain-language summary</h2>
-            <p class="policy-tag mb-16"><span class="placeholder-chip" data-i18n="contact.placeholderTag">Placeholder summary</span></p>
+            <h2 data-i18n="contact.privacyTitle">Privacy</h2>
             <ul class="policy-list">
               <li><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.5 3 7.8 7.5 9.5 4.5-1.7 7.5-5 7.5-9.5V6L12 3Z"/><path d="m9 12 2 2 4-4.5"/></svg><span data-i18n="contact.p1">We only use what you share in chat.</span></li>
               <li><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.5 3 7.8 7.5 9.5 4.5-1.7 7.5-5 7.5-9.5V6L12 3Z"/><path d="m9 12 2 2 4-4.5"/></svg><span data-i18n="contact.p2">We never ask for passwords.</span></li>
-              <li><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.5 3 7.8 7.5 9.5 4.5-1.7 7.5-5 7.5-9.5V6L12 3Z"/><path d="m9 12 2 2 4-4.5"/></svg><span data-i18n="contact.p3">This design site stores nothing on a server.</span></li>
+              <li><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.5 3 7.8 7.5 9.5 4.5-1.7 7.5-5 7.5-9.5V6L12 3Z"/><path d="m9 12 2 2 4-4.5"/></svg><span data-i18n="contact.p3">We do not create customer accounts or store your chat on this site.</span></li>
             </ul>
           </div>
 
           <div class="card policy-block anchor-offset" id="terms">
-            <h2 data-i18n="contact.termsTitle">Terms — plain-language summary</h2>
-            <p class="policy-tag mb-16"><span class="placeholder-chip" data-i18n="contact.placeholderTag">Placeholder summary</span></p>
+            <h2 data-i18n="contact.termsTitle">Terms</h2>
             <ul class="policy-list">
               <li><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12l2 2 4-4M7.8 3h8.4L21 6.8v10.4L16.2 21H7.8L3 17.2V6.8L7.8 3Z"/></svg><span data-i18n="contact.t1">A WhatsApp message is an inquiry, not a confirmed order.</span></li>
               <li><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12l2 2 4-4M7.8 3h8.4L21 6.8v10.4L16.2 21H7.8L3 17.2V6.8L7.8 3Z"/></svg><span data-i18n="contact.t2">Only eligible, in-stock marketplace items can be ordered.</span></li>

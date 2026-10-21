@@ -51,6 +51,18 @@ function createLockout({ maxFails, windowMs, baseLockMs, maxLockMs }) {
   const state = new Map(); /* key → { fails: number[], lockedUntil: number, level: number } */
   const cap = maxLockMs || baseLockMs * 8;
 
+  /* Prune settled entries so a flood of distinct emails/IPs cannot grow
+     this map without bound. */
+  const timer = setInterval(() => {
+    const now = Date.now();
+    for (const [key, e] of state) {
+      const cooling = e.lockedUntil > now;
+      const hasRecent = e.fails.some((t) => now - t < windowMs);
+      if (!cooling && !hasRecent) state.delete(key);
+    }
+  }, Math.min(windowMs, 60000));
+  if (timer.unref) timer.unref();
+
   function entry(key) {
     let e = state.get(key);
     if (!e) {

@@ -26,15 +26,21 @@ CREATE TABLE IF NOT EXISTS category (
 );
 
 CREATE TABLE IF NOT EXISTS admin_user (
-  id              TEXT PRIMARY KEY,
-  email           TEXT NOT NULL UNIQUE,
-  password_hash   TEXT NOT NULL,
-  role            TEXT NOT NULL CHECK (role IN ('owner','editor')),
-  active          INTEGER NOT NULL DEFAULT 1,
-  mfa_enrolled    INTEGER NOT NULL DEFAULT 0,
-  last_sign_in_at TEXT,
-  created_at      TEXT NOT NULL
+  id                  TEXT PRIMARY KEY,
+  email               TEXT NOT NULL UNIQUE,
+  password_hash       TEXT NOT NULL,
+  role                TEXT NOT NULL CHECK (role IN ('owner','editor')),
+  active              INTEGER NOT NULL DEFAULT 1,
+  mfa_enrolled        INTEGER NOT NULL DEFAULT 0,
+  recovery_hash       TEXT,
+  recovery_updated_at TEXT,
+  last_sign_in_at     TEXT,
+  created_at          TEXT NOT NULL
 );
+
+/* Login is case-insensitive; keep the stored address unique that way too. */
+CREATE UNIQUE INDEX IF NOT EXISTS admin_user_email_lower_idx
+  ON admin_user (lower(email));
 
 CREATE TABLE IF NOT EXISTS product (
   id                        TEXT PRIMARY KEY,
@@ -129,6 +135,11 @@ const SETTINGS_COLUMNS = [
   ["whatsapp_template_robux", "TEXT NOT NULL DEFAULT ''"],
 ];
 
+const ADMIN_COLUMNS = [
+  ["recovery_hash", "TEXT"],
+  ["recovery_updated_at", "TEXT"],
+];
+
 function migrate(db) {
   const existing = new Set(
     db.prepare("PRAGMA table_info(shop_settings)").all().map(function (c) { return c.name; })
@@ -138,6 +149,18 @@ function migrate(db) {
       db.exec("ALTER TABLE shop_settings ADD COLUMN " + col[0] + " " + col[1]);
     }
   });
+
+  const adminExisting = new Set(
+    db.prepare("PRAGMA table_info(admin_user)").all().map(function (c) { return c.name; })
+  );
+  ADMIN_COLUMNS.forEach(function (col) {
+    if (!adminExisting.has(col[0])) {
+      db.exec("ALTER TABLE admin_user ADD COLUMN " + col[0] + " " + col[1]);
+    }
+  });
+
+  /* The old reset-link flow was removed; drop its legacy table. */
+  db.exec("DROP TABLE IF EXISTS admin_password_reset");
 }
 
 function openDatabase(dbPath) {

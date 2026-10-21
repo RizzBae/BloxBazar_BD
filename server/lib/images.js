@@ -16,6 +16,7 @@ const { fieldError, httpError } = require("./problem");
 
 const MAX_SIDE = 2400;
 const MIN_SIDE = 64;
+const MAX_INPUT_PIXELS = 40 * 1000 * 1000; /* ~40 MP ceiling before any resize */
 
 const FORMATS = {
   jpeg: { ext: "jpg", options: { quality: 82 } },
@@ -27,7 +28,7 @@ const FORMATS = {
 async function processUpload(buffer, uploadsDir) {
   let meta;
   try {
-    meta = await sharp(buffer, { failOn: "error" }).metadata();
+    meta = await sharp(buffer, { failOn: "error", limitInputPixels: MAX_INPUT_PIXELS }).metadata();
   } catch (err) {
     throw httpError(422, "Validation failed", "The file is not a readable image.", [
       fieldError("file", "Only JPEG, PNG, or WebP images are allowed."),
@@ -49,7 +50,11 @@ async function processUpload(buffer, uploadsDir) {
     ]);
   }
 
-  let pipeline = sharp(buffer, { failOn: "error" }).rotate(); /* honour EXIF orientation */
+  let pipeline = sharp(buffer, {
+    failOn: "error",
+    limitInputPixels: MAX_INPUT_PIXELS,
+    pages: 1, /* decode a single frame, never an animation expansion */
+  }).rotate(); /* honour EXIF orientation */
   if (Math.max(width, height) > MAX_SIDE) {
     pipeline = pipeline.resize({ width: MAX_SIDE, height: MAX_SIDE, fit: "inside", withoutEnlargement: true });
   }

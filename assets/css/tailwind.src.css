@@ -10,25 +10,35 @@
 @source "../../assets/js/*.js";
 
 /* Design tokens — shared with base.css / screens.css / admin.css.
-   (PRD §5: one deep forest-green accent, warm off-white canvas,
-   WhatsApp treatment reserved for WhatsApp actions.) */
+   (PRD §5: logo navy as the primary accent, gold as a sparing detail,
+   warm stone canvas, WhatsApp treatment reserved for WhatsApp actions.) */
 @theme {
-  /* Colors */
-  --color-canvas: #F6F8F5;
+  /* Colors — warm cream canvas keyed to the logo (navy/gold/cream) */
+  --color-canvas: #F7F1E4;
   --color-surface: #FFFFFF;
-  --color-surface-2: #EEF2ED;
-  --color-surface-3: #E6EBE4;
-  --color-line: #E2E7E0;
-  --color-line-strong: #CDD5CC;
+  --color-surface-2: #F0E8D6;
+  --color-surface-3: #E8DEC8;
+  --color-line: #E7DDC8;
+  --color-line-strong: #D5C6A6;
 
-  --color-ink: #212823;
-  --color-ink-2: #5C675E;
-  --color-ink-3: #6B766D;
+  --color-ink: #25211A;
+  --color-ink-2: #5F5748;
+  --color-ink-3: #70685A;
 
-  --color-accent: #1F5B3F;
-  --color-accent-strong: #17492F;
-  --color-accent-soft: #E7F0E9;
-  --color-accent-border: #C6DBCB;
+  --color-accent: #1E3A78;
+  --color-accent-strong: #0F2347;
+  --color-accent-soft: #E9EDF7;
+  --color-accent-border: #C8D2E6;
+
+  --color-gold: #D9A93F;
+  --color-gold-hover: #C08E2C;
+  --color-gold-strong: #8A6417;
+  --color-gold-soft: #F6EACB;
+  --color-gold-border: #E8D2A0;
+
+  --color-ok: #1F5B3F;
+  --color-ok-soft: #E7F0E9;
+  --color-ok-border: #C6DBCB;
 
   --color-wa: #25D366;
   --color-wa-strong: #1DA851;
@@ -53,6 +63,6 @@
   --radius-xl: 16px;
 
   /* Depth — very light shadows only */
-  --shadow-sm: 0 1px 2px rgba(23, 33, 26, 0.05);
-  --shadow-md: 0 6px 24px rgba(23, 33, 26, 0.08);
+  --shadow-sm: 0 1px 2px rgba(38, 33, 24, 0.05);
+  --shadow-md: 0 6px 24px rgba(38, 33, 24, 0.08);
 }

@@ -3,19 +3,11 @@
    Product table with filters, add/edit drawer, validation,
    quick stock toggle, archive/delete confirms, save feedback.
 
-   Backend mode (page served by the backend, API reachable):
-   every change goes through /api/v1/admin with the session
+   Every change goes through /api/v1/admin with the session
    cookie + CSRF header; the server enforces the state rules
    (eligibility gates publishing, featured only when orderable,
    archive instead of delete, optimistic concurrency) and
    returns the stored record.
-
-   Static mode (file:// design preview or a static file host):
-   the original browser-only demo — changes persist in this
-   browser's localStorage (bb_admin_v1); reset from the top bar.
-
-   Preview: admin.html?drawer=add | ?drawer=edit&id=robux-1000
-            | ?state=empty
    ========================================================= */
 
 (function () {
@@ -30,7 +22,9 @@
 
   /* ---------- Working data ---------- */
   var rows = [];
-  var stateParam = T.param("state");
+
+  /* ---------- Working data ---------- */
+  var rows = [];
 
   var filter = "all";
   var q = "";
@@ -39,10 +33,16 @@
   var saving = false;
   var drawerImageKey = "";   /* image key currently in the drawer */
   var loadedImageKey = "";   /* what the drawer opened with */
-  var activeTab = "products";   /* "products" | "settings" */
+  var activeTab = "products";   /* "products" | "settings" | "team" */
   var settingsLoaded = false;   /* shop-settings form filled from current values */
   var settingsVersion = null;   /* API mode: optimistic-concurrency token */
   var savingSettings = false;
+  var currentAdmin = null;      /* API mode: { id, email, role, hasRecovery } */
+  var admins = [];              /* owner-only team list */
+  var adminsLoaded = false;
+  var savingAccount = false;
+  var savingRecovery = false;
+  var savingAdmin = false;
 
   /* ---------- Elements ---------- */
   var tbody = document.getElementById("admin-tbody");
@@ -50,9 +50,7 @@
   var chipsEl = document.getElementById("admin-chips");
   var qInput = document.getElementById("admin-q");
   var banner = document.getElementById("save-banner");
-  var bannerText = banner ? banner.querySelector("span") : null;
   var btnAdd = document.getElementById("btn-add");
-  var btnReset = document.getElementById("btn-reset");
   var btnSignOut = document.getElementById("btn-signout");
   var userNameEl = document.querySelector(".at-user span:last-child");
 
@@ -67,13 +65,15 @@
   var dDescription = document.getElementById("d-description");
   var dStock = document.getElementById("d-stock");
   var dPublication = document.getElementById("d-publication");
-  var dzNote = document.querySelector(".dropzone .dz-note");
   var dzThumb = document.querySelector(".dropzone .dz-thumb");
 
   /* Section tabs + shop settings */
   var tabButtons = T.$$(".admin-tab");
   var panelProducts = document.getElementById("panel-products");
   var panelSettings = document.getElementById("panel-settings");
+  var panelAccount = document.getElementById("panel-account");
+  var panelTeam = document.getElementById("panel-team");
+  var tabTeam = document.getElementById("tab-team");
   var pageTitle = document.querySelector(".aph-title");
   var pageSub = document.querySelector(".aph-sub");
   var sNumber = document.getElementById("s-wa-number");
@@ -81,6 +81,36 @@
   var sTplRobux = document.getElementById("s-tpl-robux");
   var btnSaveSettings = document.getElementById("btn-save-settings");
   var settingsNote = document.getElementById("settings-mode-note");
+
+  /* Account, recovery code, team */
+  var accountCard = document.getElementById("account-card");
+  var recoveryCard = document.getElementById("recovery-card");
+  var accEmail = document.getElementById("acc-email");
+  var accCurrent = document.getElementById("acc-current");
+  var accNew = document.getElementById("acc-new");
+  var accConfirm = document.getElementById("acc-confirm");
+  var btnSaveAccount = document.getElementById("btn-save-account");
+  var recoveryStatus = document.getElementById("recovery-status");
+  var recCurrent = document.getElementById("rec-current");
+  var btnNewRecovery = document.getElementById("btn-new-recovery");
+  var recoveryResult = document.getElementById("recovery-result");
+  var newRecoveryCode = document.getElementById("new-recovery-code");
+  var copyRecovery = document.getElementById("copy-recovery");
+  var btnAddAdmin = document.getElementById("btn-add-admin");
+  var adminsTbody = document.getElementById("admins-tbody");
+  var teamEmpty = document.getElementById("team-empty");
+
+  var adminModal = document.getElementById("admin-modal-backdrop");
+  var adminModalForm = document.getElementById("admin-modal-form");
+  var adminModalDone = document.getElementById("admin-modal-done");
+  var adminModalError = document.getElementById("admin-modal-error");
+  var adminModalErrorText = adminModalError ? adminModalError.querySelector("span") : null;
+  var aEmail = document.getElementById("a-email");
+  var aRole = document.getElementById("a-role");
+  var aPassword = document.getElementById("a-password");
+  var btnAdminSave = document.getElementById("admin-modal-save");
+  var newAdminCode = document.getElementById("new-admin-code");
+  var copyAdminCode = document.getElementById("copy-admin-code");
 
   var modal = document.getElementById("modal-backdrop");
   var modalTitle = document.getElementById("modal-title");
@@ -90,6 +120,15 @@
   function findRow(id) {
     for (var i = 0; i < rows.length; i++) if (rows[i].id === id) return rows[i];
     return null;
+  }
+
+  function findAdmin(id) {
+    for (var i = 0; i < admins.length; i++) if (admins[i].id === id) return admins[i];
+    return null;
+  }
+
+  function canManageAdmins() {
+    return !!(apiMode() && currentAdmin && currentAdmin.role === "owner");
   }
 
   function replaceRow(updated) {
@@ -109,7 +148,7 @@
   function stockCell(p) {
     if (p.publication === "archived") return '<span class="cell-muted">—</span>';
     var on = p.stock === "in";
-    return '<button type="button" class="badge ' + (on ? "badge-in" : "badge-out") + ' badge-dot stock-toggle" data-act="stock" data-id="' + p.id + '" aria-pressed="' + on + '" title="' + T.t("admin.toggleStock") + '">' + T.t(on ? "badge.inStock" : "badge.outOfStock") + "</button>";
+    return '<button type="button" class="badge ' + (on ? "badge-in" : "badge-out") + ' badge-dot stock-toggle" data-act="stock" data-id="' + T.esc(p.id) + '" aria-pressed="' + on + '" title="' + T.t("admin.toggleStock") + '">' + T.t(on ? "badge.inStock" : "badge.outOfStock") + "</button>";
   }
 
   function pubBadge(p) {
@@ -145,11 +184,11 @@
     var archived = p.publication === "archived";
     var actions =
       '<div class="row-actions">' +
-        '<button class="btn btn-ghost btn-sm" type="button" data-act="edit" data-id="' + p.id + '">' + T.t("admin.edit") + "</button>" +
+        '<button class="btn btn-ghost btn-sm" type="button" data-act="edit" data-id="' + T.esc(p.id) + '">' + T.t("admin.edit") + "</button>" +
         (archived
-          ? '<button class="icon-btn" type="button" data-act="restore" data-id="' + p.id + '" aria-label="' + T.t("admin.restore") + '" title="' + T.t("admin.restore") + '">' + T.icon.restore + "</button>"
-          : '<button class="icon-btn" type="button" data-act="archive" data-id="' + p.id + '" aria-label="' + T.t("admin.archive") + '" title="' + T.t("admin.archive") + '">' + T.icon.archive + "</button>") +
-        '<button class="icon-btn danger" type="button" data-act="delete" data-id="' + p.id + '" aria-label="' + T.t("admin.delete") + '" title="' + T.t("admin.delete") + '">' + T.icon.trash + "</button>" +
+          ? '<button class="icon-btn" type="button" data-act="restore" data-id="' + T.esc(p.id) + '" aria-label="' + T.t("admin.restore") + '" title="' + T.t("admin.restore") + '">' + T.icon.restore + "</button>"
+          : '<button class="icon-btn" type="button" data-act="archive" data-id="' + T.esc(p.id) + '" aria-label="' + T.t("admin.archive") + '" title="' + T.t("admin.archive") + '">' + T.icon.archive + "</button>") +
+        '<button class="icon-btn danger" type="button" data-act="delete" data-id="' + T.esc(p.id) + '" aria-label="' + T.t("admin.delete") + '" title="' + T.t("admin.delete") + '">' + T.icon.trash + "</button>" +
       "</div>";
 
     return "<tr>" +
@@ -296,17 +335,12 @@
   function closeDrawer() {
     drawer.hidden = true;
     drawerBackdrop.hidden = true;
-    document.body.style.overflow = "";
+    if (modal.hidden && (!adminModal || adminModal.hidden)) document.body.style.overflow = "";
   }
 
   function initials(name) {
     var parts = name.trim().split(/\s+/).slice(0, 2);
     return parts.map(function (w) { return w.charAt(0).toUpperCase(); }).join("") || "BB";
-  }
-
-  function todayIso() {
-    var d = new Date();
-    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   }
 
   function flashBanner() {
@@ -336,63 +370,14 @@
     var v = validateDrawer();
     if (!v) return;
 
-    var stock = segGet(dStock) || "in";
-    var publication = segGet(dPublication) || "draft";
-    var eligibility = dEligibility.value;
-
-    if (apiMode()) {
-      saveProductApi(v.name, v.price, v.desc, stock, publication, eligibility);
-      return;
-    }
-
-    /* ---------- Static design demo (localStorage) ---------- */
-    var sku = dSku.textContent;
-
-    if (editingId) {
-      for (var i = 0; i < rows.length; i++) {
-        if (rows[i].id === editingId) {
-          var p = rows[i];
-          p.name = { en: v.name, bn: v.name };
-          p.category = dCategory.value;
-          p.price = v.price;
-          p.stock = stock;
-          p.publication = publication;
-          p.eligibility = eligibility;
-          p.description = { en: v.desc, bn: v.desc };
-          p.sku = sku;
-          p.updated = todayIso();
-          break;
-        }
-      }
-    } else {
-      rows.unshift({
-        id: "custom-" + Date.now(),
-        sku: sku,
-        name: { en: v.name, bn: v.name },
-        category: dCategory.value,
-        price: v.price,
-        stock: stock,
-        publication: publication,
-        eligibility: eligibility,
-        featured: false,
-        tone: "",
-        monogram: initials(v.name),
-        updated: todayIso(),
-        short: { en: v.desc.slice(0, 110), bn: v.desc.slice(0, 110) },
-        description: { en: v.desc, bn: v.desc },
-        includes: [
-          { en: "Details confirmed in the WhatsApp chat", bn: "বিবরণ WhatsApp চ্যাটে নিশ্চিত করা হয়" },
-          { en: "Ask us in the same chat if you need help", bn: "সাহায্যে দরকার হলে একই চ্যাটে জিজ্ঞেস করুন" },
-          { en: "We never ask for passwords or one-time codes", bn: "আমরা কখনো পাসওয়ার্ড বা ওয়ান-টাইম কোড চাই না" }
-        ]
-      });
-    }
-
-    closeDrawer();
-    render();
-    persist();
-    T.toast(T.t("admin.toastSaved"));
-    flashBanner();
+    saveProductApi(
+      v.name,
+      v.price,
+      v.desc,
+      segGet(dStock) || "in",
+      segGet(dPublication) || "draft",
+      dEligibility.value
+    );
   }
 
   /* ---------- Backend mode writes ---------- */
@@ -514,26 +499,17 @@
 
   function loadRows() {
     return API.admin.listProducts({ limit: 500 }).then(function (res) {
-      rows = stateParam === "empty" ? [] : (res.items || []);
+      rows = res.items || [];
       render();
     });
   }
 
-  /* ---------- Static-mode persistence ---------- */
-  function persist() {
-    try {
-      localStorage.setItem("bb_admin_v1", JSON.stringify({
-        version: BB_DATA.dataVersion,
-        savedAt: new Date().toISOString(),
-        products: rows
-      }));
-    } catch (e) { /* storage blocked or full — ignore */ }
-  }
-
-  /* ---------- Section tabs (Products / Shop settings) ---------- */
+  /* ---------- Section tabs (Products / Settings / Account / Team) ---------- */
   var TAB_HEAD = {
     products: { title: "admin.dashboardTitle", sub: "admin.dashboardSub" },
-    settings: { title: "admin.settingsTitle", sub: "admin.settingsSub" }
+    settings: { title: "admin.settingsTitle", sub: "admin.settingsSub" },
+    account: { title: "admin.tabAccount", sub: "admin.accountSub" },
+    team: { title: "admin.tabTeam", sub: "admin.teamPageSub" }
   };
 
   function applyTabHead() {
@@ -549,7 +525,8 @@
   }
 
   function activateTab(tab) {
-    activeTab = tab === "settings" ? "settings" : "products";
+    if (tab === "team" && !canManageAdmins()) tab = "products";
+    activeTab = (tab === "settings" || tab === "account" || tab === "team") ? tab : "products";
     tabButtons.forEach(function (b) {
       var on = b.getAttribute("data-tab") === activeTab;
       b.classList.toggle("is-active", on);
@@ -557,10 +534,13 @@
     });
     panelProducts.hidden = activeTab !== "products";
     panelSettings.hidden = activeTab !== "settings";
+    if (panelAccount) panelAccount.hidden = activeTab !== "account";
+    if (panelTeam) panelTeam.hidden = activeTab !== "team";
     /* .btn sets its own display — toggle via style, not [hidden]. */
     if (btnAdd) btnAdd.style.display = activeTab === "products" ? "" : "none";
     applyTabHead();
     if (activeTab === "settings" && !settingsLoaded) loadSettings();
+    if (activeTab === "team" && !adminsLoaded) loadAdmins();
   }
 
   /* ---------- Shop settings (WhatsApp number + order messages) ---------- */
@@ -587,25 +567,11 @@
   }
 
   function applySettingsNote() {
-    if (settingsNote) {
-      settingsNote.textContent = T.t(apiMode() ? "admin.settingsNoteApi" : "admin.settingsNoteStatic");
-    }
+    if (settingsNote) settingsNote.textContent = T.t("admin.settingsNoteApi");
   }
 
   function loadSettings() {
     applySettingsNote();
-    if (!apiMode()) {
-      /* Static demo: config.js already merged any saved overrides. */
-      var bb = window.BB_DATA || {};
-      var tpls = bb.whatsappTemplates || {};
-      settingsLoaded = true;
-      fillSettings({
-        whatsappNumber: bb.whatsappNumber || "",
-        whatsappTemplateProduct: tpls.product || "",
-        whatsappTemplateRobux: tpls.robux || ""
-      });
-      return;
-    }
     API.admin.getSettings().then(function (res) {
       settingsLoaded = true;
       settingsVersion = res.version;
@@ -632,27 +598,7 @@
     }
     values.whatsappNumber = digits;
     clearSettingsErrors();
-    if (apiMode()) saveSettingsApi(values);
-    else saveSettingsStatic(values);
-  }
-
-  function saveSettingsStatic(values) {
-    /* The storefront reads this back through config.js on the next load. */
-    try {
-      localStorage.setItem("bb_admin_settings_v1", JSON.stringify({
-        version: BB_DATA.dataVersion,
-        savedAt: new Date().toISOString(),
-        settings: values
-      }));
-    } catch (e) { /* storage blocked or full — ignore */ }
-    BB_DATA.whatsappNumber = values.whatsappNumber;
-    BB_DATA.whatsappTemplates = {
-      product: values.whatsappTemplateProduct,
-      robux: values.whatsappTemplateRobux
-    };
-    if (sNumber) sNumber.value = values.whatsappNumber;
-    T.toast(T.t("admin.settingsSaved"));
-    flashBanner();
+    saveSettingsApi(values);
   }
 
   function saveSettingsApi(values) {
@@ -704,6 +650,432 @@
     });
   }
 
+  /* ---------- Account (self-service) ---------- */
+  function setRecoveryStatus() {
+    if (!recoveryStatus) return;
+    recoveryStatus.textContent = currentAdmin && currentAdmin.hasRecovery
+      ? T.t("admin.recoverySet")
+      : T.t("admin.recoveryNone");
+  }
+
+  function fillAccount() {
+    if (currentAdmin && accEmail) accEmail.value = currentAdmin.email;
+  }
+
+  function clearAccountErrors() {
+    ["f-account-email", "f-account-current", "f-account-new", "f-account-confirm"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.classList.remove("has-error");
+    });
+  }
+
+  function markAccountError(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.add("has-error");
+  }
+
+  function saveAccount() {
+    if (savingAccount || !apiMode() || !currentAdmin) return;
+    var email = accEmail ? accEmail.value.trim() : "";
+    var current = accCurrent ? accCurrent.value : "";
+    var next = accNew ? accNew.value : "";
+    var confirm = accConfirm ? accConfirm.value : "";
+
+    clearAccountErrors();
+    var emailOk = /.+@.+\..+/.test(email);
+    var currentOk = current.length > 0;
+    var newOk = next.length === 0 || next.length >= 10;
+    var confirmOk = next === confirm;
+
+    if (!emailOk) { markAccountError("f-account-email"); if (accEmail) accEmail.focus(); return; }
+    if (!currentOk) { markAccountError("f-account-current"); if (accCurrent) accCurrent.focus(); return; }
+    if (!newOk) { markAccountError("f-account-new"); if (accNew) accNew.focus(); return; }
+    if (!confirmOk) { markAccountError("f-account-confirm"); if (accConfirm) accConfirm.focus(); return; }
+
+    if (email.toLowerCase() === String(currentAdmin.email).toLowerCase() && !next) {
+      T.toast(T.t("admin.accountNoChanges"));
+      return;
+    }
+
+    savingAccount = true;
+    if (btnSaveAccount) btnSaveAccount.disabled = true;
+    API.admin.updateAccount({
+      email: email,
+      currentPassword: current,
+      newPassword: next
+    }).then(function (res) {
+      if (res && res.admin) currentAdmin = res.admin;
+      if (userNameEl) userNameEl.textContent = currentAdmin.email;
+      fillAccount();
+      if (accCurrent) accCurrent.value = "";
+      if (accNew) accNew.value = "";
+      if (accConfirm) accConfirm.value = "";
+      setRecoveryStatus();
+      T.toast(T.t("admin.accountSaved"));
+    }).catch(function (err) {
+      if (err && err.status === 401) {
+        location.replace("admin-login.html?next=" + encodeURIComponent("admin.html" + location.search));
+        return;
+      }
+      if (err && err.status === 403) {
+        markAccountError("f-account-current");
+        T.toast(T.t("admin.currentPasswordWrong"));
+        if (accCurrent) { accCurrent.focus(); accCurrent.select(); }
+        return;
+      }
+      if (err && err.status === 409) {
+        markAccountError("f-account-email");
+        T.toast(T.t("admin.accountEmailTaken"));
+        if (accEmail) accEmail.focus();
+        return;
+      }
+      if (err && err.fieldErrors && err.fieldErrors.length) {
+        var map = {
+          email: "f-account-email",
+          currentPassword: "f-account-current",
+          password: "f-account-new"
+        };
+        var first = null;
+        err.fieldErrors.forEach(function (fe) {
+          if (map[fe.field]) {
+            markAccountError(map[fe.field]);
+            if (!first) first = document.getElementById(map[fe.field]);
+          }
+        });
+        T.toast(err.fieldErrors[0].message);
+        if (first) {
+          var input = first.querySelector("input");
+          if (input) input.focus();
+        }
+        return;
+      }
+      if (err && err.problem && err.problem.detail) { T.toast(err.problem.detail); return; }
+      T.toast(T.t("admin.accountError"));
+    }).then(function () {
+      savingAccount = false;
+      if (btnSaveAccount) btnSaveAccount.disabled = false;
+    });
+  }
+
+  function generateRecovery() {
+    if (savingRecovery || !apiMode()) return;
+    var current = recCurrent ? recCurrent.value : "";
+    var box = document.getElementById("f-recovery-current");
+    if (box) box.classList.remove("has-error");
+    if (!current) {
+      if (box) box.classList.add("has-error");
+      if (recCurrent) recCurrent.focus();
+      return;
+    }
+
+    savingRecovery = true;
+    if (btnNewRecovery) btnNewRecovery.disabled = true;
+    API.admin.newRecoveryCode({ currentPassword: current }).then(function (res) {
+      if (recCurrent) recCurrent.value = "";
+      if (currentAdmin) currentAdmin.hasRecovery = true;
+      setRecoveryStatus();
+      if (res && res.recoveryCode && newRecoveryCode && recoveryResult) {
+        newRecoveryCode.textContent = res.recoveryCode;
+        recoveryResult.hidden = false;
+        if (copyRecovery) copyRecovery.focus();
+      }
+      T.toast(T.t("admin.recoveryGenerated"));
+    }).catch(function (err) {
+      if (err && err.status === 401) {
+        location.replace("admin-login.html?next=" + encodeURIComponent("admin.html" + location.search));
+        return;
+      }
+      if (err && err.status === 403) {
+        if (box) box.classList.add("has-error");
+        T.toast(T.t("admin.currentPasswordWrong"));
+        if (recCurrent) { recCurrent.focus(); recCurrent.select(); }
+        return;
+      }
+      if (err && err.problem && err.problem.detail) { T.toast(err.problem.detail); return; }
+      T.toast(T.t("admin.recoveryError"));
+    }).then(function () {
+      savingRecovery = false;
+      if (btnNewRecovery) btnNewRecovery.disabled = false;
+    });
+  }
+
+  /* ---------- Team (owner only) ---------- */
+  function setTeamVisible() {
+    if (!tabTeam) return;
+    tabTeam.hidden = !canManageAdmins();
+    if (!canManageAdmins() && activeTab === "team") activateTab("products");
+  }
+
+  function loadAdmins() {
+    if (!canManageAdmins()) return Promise.resolve();
+    return API.admin.listAdmins().then(function (res) {
+      admins = res.items || [];
+      adminsLoaded = true;
+      renderAdmins();
+    }).catch(function (err) {
+      if (err && err.status === 401) {
+        location.replace("admin-login.html?next=" + encodeURIComponent("admin.html" + location.search));
+        return;
+      }
+      T.toast(T.t("admin.teamLoadError"));
+    });
+  }
+
+  function renderAdmins() {
+    if (!adminsTbody) return;
+    adminsTbody.innerHTML = admins.map(function (a) {
+      var self = currentAdmin && a.id === currentAdmin.id;
+      var roleBadge = a.role === "owner"
+        ? '<span class="badge badge-accent">' + T.t("admin.roleOwner") + "</span>"
+        : '<span class="badge">' + T.t("admin.roleEditor") + "</span>";
+      var statusBadge = a.active
+        ? '<span class="badge badge-in">' + T.t("admin.statusActive") + "</span>"
+        : '<span class="badge badge-out">' + T.t("admin.statusDisabled") + "</span>";
+      var lastSignIn = a.lastSignInAt
+        ? T.fmtDate(String(a.lastSignInAt).slice(0, 10))
+        : T.t("admin.never");
+      var roleAction = self
+        ? ""
+        : '<button class="btn btn-ghost btn-sm" type="button" data-admin-act="' +
+            (a.role === "owner" ? "make-editor" : "make-owner") + '" data-id="' + T.esc(a.id) + '">' +
+            T.t(a.role === "owner" ? "admin.makeEditor" : "admin.makeOwner") + "</button>";
+      var activateAction = self
+        ? ""
+        : '<button class="btn btn-ghost btn-sm" type="button" data-admin-act="' +
+            (a.active ? "deactivate" : "activate") + '" data-id="' + T.esc(a.id) + '">' +
+            T.t(a.active ? "admin.deactivate" : "admin.activate") + "</button>";
+      var deleteAction = self
+        ? ""
+        : '<button class="icon-btn danger" type="button" data-admin-act="delete" data-id="' + T.esc(a.id) +
+            '" aria-label="' + T.t("admin.deleteAdmin") + '" title="' + T.t("admin.deleteAdmin") + '">' +
+            T.icon.trash + "</button>";
+      var action = self
+        ? '<span class="cell-muted">—</span>'
+        : roleAction + activateAction + deleteAction;
+
+      return "<tr>" +
+        '<td><span class="cell-label">' + T.t("admin.colAdmin") + '</span><span class="team-email">' + T.esc(a.email) + "</span>" +
+          (self ? ' <span class="cell-muted">(' + T.t("admin.you") + ")</span>" : "") + "</td>" +
+        '<td><span class="cell-label">' + T.t("admin.colRole") + "</span>" + roleBadge + "</td>" +
+        '<td><span class="cell-label">' + T.t("admin.colStatus") + "</span>" + statusBadge + "</td>" +
+        '<td><span class="cell-label">' + T.t("admin.colLastSignIn") + '</span><span class="cell-muted">' + T.esc(lastSignIn) + "</span></td>" +
+        '<td><span class="cell-label">' + T.t("admin.colActions") + '</span><div class="team-actions">' + action + "</div></td>" +
+      "</tr>";
+    }).join("");
+
+    if (teamEmpty) {
+      teamEmpty.innerHTML = admins.length
+        ? ""
+        : '<p class="team-empty">' + T.esc(T.t("admin.teamEmpty")) + "</p>";
+    }
+  }
+
+  function showAdminModalError(message) {
+    if (!adminModalError) return;
+    if (message) {
+      if (adminModalErrorText) adminModalErrorText.textContent = message;
+      adminModalError.classList.add("is-visible");
+    } else {
+      adminModalError.classList.remove("is-visible");
+    }
+  }
+
+  function clearAdminModalErrors() {
+    showAdminModalError("");
+    ["f-admin-email", "f-admin-password"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.classList.remove("has-error");
+    });
+  }
+
+  function openAdminModal() {
+    if (!canManageAdmins()) return;
+    clearAdminModalErrors();
+    if (aEmail) aEmail.value = "";
+    if (aRole) aRole.value = "editor";
+    if (aPassword) aPassword.value = "";
+    if (adminModalForm) adminModalForm.hidden = false;
+    if (adminModalDone) adminModalDone.hidden = true;
+    if (adminModal) adminModal.hidden = false;
+    document.body.style.overflow = "hidden";
+    if (aEmail) aEmail.focus();
+  }
+
+  function closeAdminModal() {
+    if (!adminModal) return;
+    adminModal.hidden = true;
+    if (newAdminCode) newAdminCode.textContent = "";
+    if (drawer.hidden && modal.hidden) document.body.style.overflow = "";
+  }
+
+  function createAdmin() {
+    if (savingAdmin) return;
+    clearAdminModalErrors();
+
+    var email = aEmail ? aEmail.value.trim() : "";
+    var role = aRole ? aRole.value : "editor";
+    var password = aPassword ? aPassword.value : "";
+
+    var emailOk = /.+@.+\..+/.test(email);
+    var passwordOk = password.length >= 10;
+    if (!emailOk) {
+      var emailBox = document.getElementById("f-admin-email");
+      if (emailBox) emailBox.classList.add("has-error");
+      if (aEmail) aEmail.focus();
+      return;
+    }
+    if (!passwordOk) {
+      var pwBox = document.getElementById("f-admin-password");
+      if (pwBox) pwBox.classList.add("has-error");
+      if (aPassword) aPassword.focus();
+      return;
+    }
+
+    savingAdmin = true;
+    if (btnAdminSave) btnAdminSave.disabled = true;
+    API.admin.createAdmin({ email: email, role: role, password: password }).then(function (res) {
+      if (res && res.admin) {
+        admins.push(res.admin);
+        renderAdmins();
+      }
+      if (newAdminCode) newAdminCode.textContent = (res && res.recoveryCode) || "";
+      if (adminModalForm) adminModalForm.hidden = true;
+      if (adminModalDone) adminModalDone.hidden = false;
+      if (copyAdminCode) copyAdminCode.focus();
+      adminsLoaded = true;
+    }).catch(function (err) {
+      if (err && err.status === 401) {
+        location.replace("admin-login.html?next=" + encodeURIComponent("admin.html" + location.search));
+        return;
+      }
+      if (err && err.status === 409) {
+        var emailBox = document.getElementById("f-admin-email");
+        if (emailBox) emailBox.classList.add("has-error");
+        showAdminModalError(T.t("admin.accountEmailTaken"));
+        if (aEmail) aEmail.focus();
+        return;
+      }
+      if (err && err.fieldErrors && err.fieldErrors.length) {
+        var map = { email: "f-admin-email", password: "f-admin-password" };
+        var first = null;
+        err.fieldErrors.forEach(function (fe) {
+          if (map[fe.field]) {
+            var box = document.getElementById(map[fe.field]);
+            if (box) {
+              box.classList.add("has-error");
+              if (!first) first = box;
+            }
+          }
+        });
+        showAdminModalError(err.fieldErrors[0].message);
+        if (first) {
+          var input = first.querySelector("input");
+          if (input) input.focus();
+        }
+        return;
+      }
+      showAdminModalError((err && err.problem && err.problem.detail) || T.t("admin.adminError"));
+    }).then(function () {
+      savingAdmin = false;
+      if (btnAdminSave) btnAdminSave.disabled = false;
+    });
+  }
+
+  function setConfirmTone(danger) {
+    modalConfirm.className = "btn " + (danger ? "btn-danger" : "btn-primary");
+  }
+
+  function openAdminConfirm(id) {
+    var admin = findAdmin(id);
+    if (!admin || (currentAdmin && admin.id === currentAdmin.id)) return;
+    var activate = !admin.active;
+    pending = { kind: activate ? "admin-activate" : "admin-deactivate", id: admin.id };
+    modalTitle.textContent = T.t(activate ? "admin.activateTitle" : "admin.deactivateTitle", {
+      email: admin.email
+    });
+    modalBody.textContent = T.t(activate ? "admin.activateBody" : "admin.deactivateBody");
+    modalConfirm.textContent = T.t(activate ? "admin.activate" : "admin.deactivate");
+    setConfirmTone(!activate);
+    modal.hidden = false;
+    document.body.style.overflow = "hidden";
+    modalConfirm.focus();
+  }
+
+  function openAdminRoleConfirm(id, role) {
+    var admin = findAdmin(id);
+    if (!admin || (currentAdmin && admin.id === currentAdmin.id) || admin.role === role) return;
+    pending = { kind: "admin-role", id: admin.id, role: role };
+    modalTitle.textContent = T.t(role === "owner" ? "admin.makeOwnerTitle" : "admin.makeEditorTitle", {
+      email: admin.email
+    });
+    modalBody.textContent = T.t(role === "owner" ? "admin.makeOwnerBody" : "admin.makeEditorBody");
+    modalConfirm.textContent = T.t(role === "owner" ? "admin.makeOwner" : "admin.makeEditor");
+    setConfirmTone(false);
+    modal.hidden = false;
+    document.body.style.overflow = "hidden";
+    modalConfirm.focus();
+  }
+
+  function openAdminDeleteConfirm(id) {
+    var admin = findAdmin(id);
+    if (!admin || (currentAdmin && admin.id === currentAdmin.id)) return;
+    pending = { kind: "admin-delete", id: admin.id };
+    modalTitle.textContent = T.t("admin.deleteAdminTitle", { email: admin.email });
+    modalBody.textContent = T.t("admin.deleteAdminBody");
+    modalConfirm.textContent = T.t("admin.deleteAdmin");
+    setConfirmTone(true);
+    modal.hidden = false;
+    document.body.style.overflow = "hidden";
+    modalConfirm.focus();
+  }
+
+  function updateAdminRow(id, patch) {
+    API.admin.updateAdmin(id, patch).then(function (res) {
+      var updated = (res && res.admin) || res;
+      for (var i = 0; i < admins.length; i += 1) {
+        if (admins[i].id === updated.id) { admins[i] = updated; break; }
+      }
+      renderAdmins();
+      T.toast(T.t("admin.adminChanged"));
+    }).catch(function (err) {
+      if (err && err.status === 401) {
+        location.replace("admin-login.html?next=" + encodeURIComponent("admin.html" + location.search));
+        return;
+      }
+      if (err && err.problem && err.problem.detail) { T.toast(err.problem.detail); return; }
+      T.toast(T.t("admin.adminError"));
+    });
+  }
+
+  /* Shared copy-to-clipboard with a selection fallback for http hosts. */
+  function copyToClipboard(text, button) {
+    if (!text) return;
+    var done = function () {
+      if (!button) return;
+      button.textContent = T.t("admin.codeCopied");
+      setTimeout(function () { button.textContent = T.t("admin.copyCode"); }, 2000);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallback(); });
+      return;
+    }
+    fallback();
+    function fallback() {
+      try {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        document.execCommand("copy");
+        document.body.removeChild(area);
+        done();
+      } catch (e) { /* leave the code on screen for manual copy */ }
+    }
+  }
+
   /* ---------- Confirm modal ---------- */
   function openConfirm(kind, id) {
     var p = findRow(id);
@@ -713,6 +1085,7 @@
     modalTitle.textContent = T.t(kind === "archive" ? "admin.archiveTitle" : "admin.deleteTitle");
     modalBody.textContent = T.t(kind === "archive" ? "admin.archiveBody" : "admin.deleteBody", { name: name });
     modalConfirm.textContent = T.t(kind === "archive" ? "admin.confirmArchive" : "admin.confirmDelete");
+    setConfirmTone(true);
     modal.hidden = false;
     document.body.style.overflow = "hidden";
     modalConfirm.focus();
@@ -721,17 +1094,7 @@
   function closeModal() {
     modal.hidden = true;
     pending = null;
-    if (drawer.hidden) document.body.style.overflow = "";
-  }
-
-  function openResetConfirm() {
-    pending = { kind: "reset", id: null };
-    modalTitle.textContent = T.t("admin.resetTitle");
-    modalBody.textContent = T.t("admin.resetBody");
-    modalConfirm.textContent = T.t("admin.confirmReset");
-    modal.hidden = false;
-    document.body.style.overflow = "hidden";
-    modalConfirm.focus();
+    if (drawer.hidden && (!adminModal || adminModal.hidden)) document.body.style.overflow = "";
   }
 
   function confirmAction() {
@@ -739,45 +1102,52 @@
     var id = pending.id;
     var kind = pending.kind;
 
-    if (kind === "reset") {
-      try {
-        localStorage.removeItem("bb_admin_v1");
-        localStorage.removeItem("bb_admin_settings_v1");
-      } catch (e) { /* ignore */ }
-      location.reload();
-      return;
-    }
-
-    if (apiMode()) {
-      var row = findRow(id);
+    if (kind === "admin-activate" || kind === "admin-deactivate") {
       closeModal();
-      if (!row) return;
-      if (kind === "archive") {
-        API.admin.setPublication(id, "archived", row.version).then(function (updated) {
-          replaceRow(updated);
-          T.toast(T.t("admin.toastArchived"));
-          render();
-        }).catch(apiErrorToast);
-      } else {
-        API.admin.deleteProduct(id, row.version).then(function () {
-          rows = rows.filter(function (p) { return p.id !== id; });
-          T.toast(T.t("admin.toastDeleted"));
-          render();
-        }).catch(apiErrorToast);
-      }
+      updateAdminRow(id, { active: kind === "admin-activate" });
       return;
     }
 
-    if (kind === "archive") {
-      rows.forEach(function (p) { if (p.id === id) { p.publication = "archived"; p.updated = todayIso(); } });
-      T.toast(T.t("admin.toastArchived"));
-    } else {
-      rows = rows.filter(function (p) { return p.id !== id; });
-      T.toast(T.t("admin.toastDeleted"));
+    if (kind === "admin-role") {
+      var nextRole = pending.role;
+      closeModal();
+      updateAdminRow(id, { role: nextRole });
+      return;
     }
-    persist();
+
+    if (kind === "admin-delete") {
+      closeModal();
+      API.admin.deleteAdmin(id).then(function () {
+        admins = admins.filter(function (a) { return a.id !== id; });
+        renderAdmins();
+        T.toast(T.t("admin.toastAdminDeleted"));
+      }).catch(function (err) {
+        if (err && err.status === 401) {
+          location.replace("admin-login.html?next=" + encodeURIComponent("admin.html" + location.search));
+          return;
+        }
+        if (err && err.problem && err.problem.detail) { T.toast(err.problem.detail); return; }
+        T.toast(T.t("admin.adminError"));
+      });
+      return;
+    }
+
+    var row = findRow(id);
     closeModal();
-    render();
+    if (!row) return;
+    if (kind === "archive") {
+      API.admin.setPublication(id, "archived", row.version).then(function (updated) {
+        replaceRow(updated);
+        T.toast(T.t("admin.toastArchived"));
+        render();
+      }).catch(apiErrorToast);
+    } else {
+      API.admin.deleteProduct(id, row.version).then(function () {
+        rows = rows.filter(function (p) { return p.id !== id; });
+        T.toast(T.t("admin.toastDeleted"));
+        render();
+      }).catch(apiErrorToast);
+    }
   }
 
   /* ---------- Image upload (backend mode only) ---------- */
@@ -816,21 +1186,57 @@
   });
 
   if (btnSaveSettings) btnSaveSettings.addEventListener("click", saveSettings);
+  if (btnSaveAccount) btnSaveAccount.addEventListener("click", saveAccount);
+  if (btnNewRecovery) btnNewRecovery.addEventListener("click", generateRecovery);
+  if (btnAddAdmin) btnAddAdmin.addEventListener("click", openAdminModal);
+
+  if (copyRecovery) {
+    copyRecovery.addEventListener("click", function () {
+      copyToClipboard(newRecoveryCode ? newRecoveryCode.textContent : "", copyRecovery);
+    });
+  }
+  if (copyAdminCode) {
+    copyAdminCode.addEventListener("click", function () {
+      copyToClipboard(newAdminCode ? newAdminCode.textContent : "", copyAdminCode);
+    });
+  }
+
+  if (adminModal) {
+    adminModal.addEventListener("click", function (e) { if (e.target === adminModal) closeAdminModal(); });
+    document.getElementById("admin-modal-cancel").addEventListener("click", closeAdminModal);
+    document.getElementById("admin-modal-close").addEventListener("click", closeAdminModal);
+    btnAdminSave.addEventListener("click", createAdmin);
+  }
+
+  if (adminsTbody) {
+    adminsTbody.addEventListener("click", function (e) {
+      var btn = e.target.closest("[data-admin-act]");
+      if (!btn) return;
+      var act = btn.getAttribute("data-admin-act");
+      if (act === "make-owner") openAdminRoleConfirm(btn.getAttribute("data-id"), "owner");
+      else if (act === "make-editor") openAdminRoleConfirm(btn.getAttribute("data-id"), "editor");
+      else if (act === "delete") openAdminDeleteConfirm(btn.getAttribute("data-id"));
+      else openAdminConfirm(btn.getAttribute("data-id"));
+    });
+  }
+
+  [accEmail, accCurrent, accNew, accConfirm, recCurrent, aEmail, aPassword].forEach(function (input) {
+    if (!input) return;
+    input.addEventListener("input", function () {
+      var field = input.closest(".field");
+      if (field) field.classList.remove("has-error");
+      if (input === aEmail || input === aPassword) showAdminModalError("");
+    });
+  });
 
   btnAdd.addEventListener("click", function () {
     if (activeTab !== "products") activateTab("products");
     openDrawer(null);
   });
-  if (btnReset) btnReset.addEventListener("click", openResetConfirm);
 
   if (btnSignOut) btnSignOut.addEventListener("click", function () {
-    if (apiMode()) {
-      API.admin.signOut().catch(function () { /* sign out locally anyway */ })
-        .then(function () { location.href = "admin-login.html"; });
-      return;
-    }
-    T.adminSignOut();
-    location.href = "admin-login.html";
+    API.admin.signOut().catch(function () { /* sign out locally anyway */ })
+      .then(function () { location.href = "admin-login.html"; });
   });
 
   document.getElementById("drawer-close").addEventListener("click", closeDrawer);
@@ -861,43 +1267,24 @@
     if (act === "delete") { openConfirm("delete", id); return; }
 
     if (act === "restore") {
-      if (apiMode()) {
-        var r1 = findRow(id);
-        if (!r1) return;
-        API.admin.setPublication(id, "draft", r1.version).then(function (updated) {
-          replaceRow(updated);
-          T.toast(T.t("admin.toastRestored"));
-          render();
-        }).catch(apiErrorToast);
-        return;
-      }
-      rows.forEach(function (p) { if (p.id === id) { p.publication = "draft"; p.updated = todayIso(); } });
-      T.toast(T.t("admin.toastRestored"));
-      persist();
-      render();
+      var r1 = findRow(id);
+      if (!r1) return;
+      API.admin.setPublication(id, "draft", r1.version).then(function (updated) {
+        replaceRow(updated);
+        T.toast(T.t("admin.toastRestored"));
+        render();
+      }).catch(apiErrorToast);
       return;
     }
 
     if (act === "stock") {
-      if (apiMode()) {
-        var r2 = findRow(id);
-        if (!r2) return;
-        API.admin.setStock(id, r2.stock === "in" ? "out" : "in", r2.version).then(function (updated) {
-          replaceRow(updated);
-          T.toast(T.t(updated.stock === "in" ? "admin.toastStockIn" : "admin.toastStockOut"));
-          render();
-        }).catch(apiErrorToast);
-        return;
-      }
-      var toggled = null;
-      rows.forEach(function (p) {
-        if (p.id === id) { p.stock = p.stock === "in" ? "out" : "in"; p.updated = todayIso(); toggled = p; }
-      });
-      if (toggled) {
-        T.toast(T.t(toggled.stock === "in" ? "admin.toastStockIn" : "admin.toastStockOut"));
-        persist();
+      var r2 = findRow(id);
+      if (!r2) return;
+      API.admin.setStock(id, r2.stock === "in" ? "out" : "in", r2.version).then(function (updated) {
+        replaceRow(updated);
+        T.toast(T.t(updated.stock === "in" ? "admin.toastStockIn" : "admin.toastStockOut"));
         render();
-      }
+      }).catch(apiErrorToast);
     }
   });
 
@@ -916,7 +1303,8 @@
 
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") {
-      if (!modal.hidden) closeModal();
+      if (adminModal && !adminModal.hidden) closeAdminModal();
+      else if (!modal.hidden) closeModal();
       else if (!drawer.hidden) closeDrawer();
     }
   });
@@ -934,6 +1322,8 @@
     renderCategoryOptions();
     applyTabHead();
     applySettingsNote();
+    if (canManageAdmins() && adminsLoaded) renderAdmins();
+    setRecoveryStatus();
     if (!drawer.hidden) drawerTitle.textContent = T.t(editingId ? "admin.drawerEdit" : "admin.drawerAdd");
   });
 
@@ -944,16 +1334,6 @@
   }
 
   function initApiMode() {
-    /* "Reset demo data" only applies to the browser-only demo. */
-    if (btnReset) btnReset.style.display = "none";
-    if (bannerText) {
-      bannerText.setAttribute("data-i18n", "admin.saveBannerApi");
-      bannerText.textContent = T.t("admin.saveBannerApi");
-    }
-    if (dzNote) {
-      dzNote.setAttribute("data-i18n", "admin.dzNoteActive");
-      dzNote.textContent = T.t("admin.dzNoteActive");
-    }
     wireUpload();
 
     API.admin.session()
@@ -964,32 +1344,35 @@
       })
       .then(function (res) {
         markAuthed();
-        if (userNameEl && res && res.admin && res.admin.email) {
-          userNameEl.removeAttribute("data-i18n");
-          userNameEl.textContent = res.admin.email;
+        currentAdmin = (res && res.admin) || null;
+        if (currentAdmin) {
+          if (userNameEl) {
+            userNameEl.removeAttribute("data-i18n");
+            userNameEl.textContent = currentAdmin.email;
+          }
+          if (accountCard) accountCard.hidden = false;
+          if (recoveryCard) recoveryCard.hidden = false;
+          fillAccount();
+          setRecoveryStatus();
+          setTeamVisible();
         }
         return loadRows().catch(function () { T.toast(T.t("admin.saveError")); });
       })
       .then(function () {
         openFromParams();
-        if (T.param("tab") === "settings") activateTab("settings");
+        var tab = T.param("tab");
+        if (tab === "settings") activateTab("settings");
+        else if (tab === "account") activateTab("account");
+        else if (tab === "team" && canManageAdmins()) activateTab("team");
       })
       .catch(function () { /* session redirect already handled */ });
   }
 
   function initStaticMode() {
-    if (!T.adminSessionActive()) { location.replace("admin-login.html?next=" + encodeURIComponent("admin.html" + location.search)); return; }
-    markAuthed();
-
-    rows = (window.BB_DATA.products || []).map(function (p) {
-      var copy = {};
-      for (var k in p) if (Object.prototype.hasOwnProperty.call(p, k)) copy[k] = p[k];
-      return copy;
-    });
-    if (stateParam === "empty") rows = [];
-    render();
-    openFromParams();
-    if (T.param("tab") === "settings") activateTab("settings");
+    /* Admin data lives on the server. Without the backend this page has
+       nothing to show, so send the visitor to the sign-in screen, which
+       explains that the server version is required. */
+    location.replace("admin-login.html?next=" + encodeURIComponent("admin.html" + location.search));
   }
 
   document.addEventListener("bb:ready", function () {

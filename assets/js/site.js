@@ -1,7 +1,7 @@
 /* =========================================================
    BloxBazaar BD — site.js
    Shared chrome (header/footer), language control, helpers,
-   WhatsApp link building, toasts, state-preview banners.
+   WhatsApp link building, and toasts.
    ========================================================= */
 
 window.BB = (function () {
@@ -361,7 +361,7 @@ window.BB = (function () {
               '<h4 data-i18n="f.guides">' + t("f.guides") + "</h4>" +
               '<ul class="f-links">' +
                 guideKeys.map(function (id) {
-                  return '<li><a href="guide-' + id + '.html">' + esc(bg(BB_GUIDES[id].name)) + "</a></li>";
+                  return '<li><a href="guide-' + esc(id) + '.html">' + esc(bg(BB_GUIDES[id].name)) + "</a></li>";
                 }).join("") +
               "</ul>" +
             "</div>" +
@@ -376,7 +376,6 @@ window.BB = (function () {
           "</div>" +
           '<div class="f-bottom">' +
             '<span data-i18n="f.rights">' + t("f.rights") + "</span>" +
-            '<span data-i18n="f.placeholder">' + t("f.placeholder") + "</span>" +
           "</div>" +
         "</div>" +
       "</footer>";
@@ -402,113 +401,11 @@ window.BB = (function () {
     }, 3400);
   }
 
-  /* ---------- Admin session (design-stage gate) ----------
-     Client-side only: it keeps the admin tools out of casual view,
-     but it is NOT real security — anyone with developer tools can
-     bypass it. Enforce auth on the server before going live (§11).
-     Sessions live in sessionStorage ("keep me signed in" uses
-     localStorage). Five wrong passwords → 60-second lockout. */
-  var SESSION_KEY = "bb_admin_session";
-  var ATTEMPT_KEY = "bb_admin_try";
-
-  function sha256Hex(text) {
-    if (!(window.crypto && crypto.subtle && window.TextEncoder)) return null;
-    var data = new TextEncoder().encode(text);
-    return crypto.subtle.digest("SHA-256", data).then(function (buf) {
-      var bytes = new Uint8Array(buf);
-      var hex = "";
-      for (var i = 0; i < bytes.length; i++) hex += ("0" + bytes[i].toString(16)).slice(-2);
-      return hex;
-    });
-  }
-
-  function readAdminSession() {
-    var raw = null;
-    try { raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY); }
-    catch (e) { return null; }
-    if (!raw) return null;
-    try {
-      var s = JSON.parse(raw);
-      if (s && s.exp && s.exp > Date.now()) return s;
-    } catch (e) { /* corrupt session — treat as signed out */ }
-    return null;
-  }
-
-  function adminSessionActive() { return !!readAdminSession(); }
-
-  function adminSignOut() {
-    try { sessionStorage.removeItem(SESSION_KEY); } catch (e) { /* ignore */ }
-    try { localStorage.removeItem(SESSION_KEY); } catch (e) { /* ignore */ }
-  }
-
-  function failedAttempts() {
-    try { return JSON.parse(localStorage.getItem(ATTEMPT_KEY) || "null") || { n: 0, until: 0 }; }
-    catch (e) { return { n: 0, until: 0 }; }
-  }
-
-  function adminLockRemaining() {
-    var s = failedAttempts();
-    return s.until > Date.now() ? s.until - Date.now() : 0;
-  }
-
-  function noteFailedAttempt() {
-    var s = failedAttempts();
-    if (!(s.until > Date.now())) s.until = 0;
-    s.n = (s.n || 0) + 1;
-    if (s.n >= 5) { s.until = Date.now() + 60000; s.n = 0; }
-    try { localStorage.setItem(ATTEMPT_KEY, JSON.stringify(s)); } catch (e) { /* ignore */ }
-  }
-
-  function clearAttempts() {
-    try { localStorage.removeItem(ATTEMPT_KEY); } catch (e) { /* ignore */ }
-  }
-
-  function adminSignIn(password, remember) {
-    var cfg = (window.BB_DATA && BB_DATA.admin) || {};
-    var target = String(cfg.passwordHash || "").toLowerCase();
-    var lock = adminLockRemaining();
-    if (lock > 0) return Promise.reject(new Error("locked:" + lock));
-    if (!target) return Promise.reject(new Error("not-configured"));
-    if (!(window.crypto && crypto.subtle)) return Promise.reject(new Error("insecure-context"));
-    return sha256Hex(password).then(function (hex) {
-      if (hex !== target) {
-        noteFailedAttempt();
-        var rest = adminLockRemaining();
-        throw new Error(rest > 0 ? "locked:" + rest : "bad-password");
-      }
-      var hours = Number(cfg.sessionHours) > 0 ? Number(cfg.sessionHours) : 12;
-      var session = { exp: Date.now() + hours * 3600 * 1000, at: new Date().toISOString() };
-      adminSignOut();
-      try {
-        (remember ? localStorage : sessionStorage).setItem(SESSION_KEY, JSON.stringify(session));
-      } catch (e) { /* ignore */ }
-      clearAttempts();
-      return session;
-    });
-  }
-
-  /* ---------- State-preview banner (design review aid) ---------- */
-  function mountStateNote() {
-    var st = param("state");
-    var drawer = param("drawer");
-    var label = null;
-    if (drawer === "add") label = "Add product drawer";
-    else if (drawer === "edit") label = "Edit product drawer";
-    else if (st) label = st.charAt(0).toUpperCase() + st.slice(1);
-    if (!label) return;
-    var main = $("#main") || document.body;
-    var div = document.createElement("div");
-    div.className = "state-preview";
-    div.innerHTML = I.info + "<span>" + esc(t("state.note", { name: label })) + "</span>";
-    main.insertBefore(div, main.firstChild);
-  }
-
   /* ---------- Chrome init ---------- */
   function initChrome() {
     renderHeader();
     renderFooter();
     setLang(lang); /* applies lang, aria-pressed, and translations */
-    mountStateNote();
   }
 
   /* ---------- Boot ----------
@@ -543,8 +440,6 @@ window.BB = (function () {
     icon: I, applyI18n: applyI18n, setLang: setLang, getLang: getLang,
     waLink: waLink, productWaLink: productWaLink, supportWaLink: supportWaLink,
     robuxPrice: robuxPrice, robuxWaLink: robuxWaLink,
-    adminSessionActive: adminSessionActive, adminSignIn: adminSignIn,
-    adminSignOut: adminSignOut, adminLockRemaining: adminLockRemaining,
     toast: toast, currentPage: currentPage, initChrome: initChrome
   };
 })();

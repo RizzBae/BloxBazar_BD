@@ -11,7 +11,7 @@
   position: sticky;
   top: 0;
   z-index: 50;
-  background: var(--surface);
+  background: var(--canvas);
   border-bottom: 1px solid var(--border);
 }
 .header-inner {
@@ -33,6 +33,7 @@
 
 .main-nav { display: flex; align-items: center; gap: 4px; margin-left: auto; }
 .nav-link, .dd-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -46,6 +47,16 @@
 }
 .nav-link:hover, .dd-btn:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
 .nav-link.is-active, .dd-btn.is-active { color: var(--accent-strong); font-weight: 600; }
+.nav-link.is-active::after, .dd-btn.is-active::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--gold);
+}
 
 .nav-dropdown { position: relative; }
 .dd-btn .icon-sm { width: 14px; height: 14px; transition: transform 0.18s ease; }
@@ -109,7 +120,7 @@
 }
 .nav-toggle:hover { background: var(--surface-2); }
 
-.mobile-nav { border-top: 1px solid var(--border); background: var(--surface); }
+.mobile-nav { border-top: 1px solid var(--border); background: var(--canvas); }
 .mobile-nav nav { padding: 10px 20px 16px; display: grid; gap: 2px; }
 .mnav-link {
   display: block;
@@ -134,7 +145,7 @@
 /* ---------- Footer ---------- */
 .site-footer {
   margin-top: 56px;
-  background: var(--surface);
+  background: var(--canvas);
   border-top: 1px solid var(--border);
 }
 .f-cols {
@@ -168,23 +179,6 @@
   font-size: 13px;
   color: var(--text-3);
 }
-
-/* ---------- State preview bar (design review) ---------- */
-.state-preview {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 16px auto 0;
-  max-width: 1120px;
-  padding: 8px 14px;
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--r-md);
-  background: var(--surface-2);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-2);
-}
-.state-preview .icon { width: 15px; height: 15px; color: var(--text-3); }
 
 /* ---------- Toast ---------- */
 .toast-wrap {
@@ -242,7 +236,7 @@
   font-size: 13.5px;
   color: var(--text-3);
 }
-.hero-note .icon { width: 15px; height: 15px; color: var(--accent); }
+.hero-note .icon { width: 15px; height: 15px; color: var(--gold); }
 
 /* ---------- Catalogue ---------- */
 .cat-toolbar {
@@ -561,19 +555,11 @@
 }
 .contact-card h3 { font-size: 17px; }
 .contact-card p { font-size: 14.5px; color: var(--text-2); flex: 1; }
-.placeholder-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border: 1px dashed var(--border-strong);
-  border-radius: 999px;
-  font-size: 12.5px;
-  color: var(--text-3);
-}
+.contact-value { font-size: 14px; font-weight: 600; color: var(--text-2); }
+.contact-value a { color: var(--accent-strong); text-decoration: none; }
+.contact-value a:hover { text-decoration: underline; }
 .policy-block { padding: 24px; }
 .policy-block h2 { margin-bottom: 6px; }
-.policy-tag { margin-bottom: 14px; }
 .policy-list { display: grid; gap: 10px; }
 .policy-list li { display: flex; gap: 10px; font-size: 14.5px; color: var(--text-2); }
 .policy-list .icon { width: 16px; height: 16px; margin-top: 3px; color: var(--accent); flex: none; }

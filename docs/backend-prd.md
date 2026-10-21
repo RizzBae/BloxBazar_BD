@@ -121,7 +121,7 @@ Do **not** add microservices, Redis, a separate search engine, message queues, b
 - **Owner** — full access: products, prices, stock, eligibility, settings, guides, audit, admin accounts.
 - **Editor** — day-to-day operations: create/edit products, prices, stock, images; publish/unpublish; cannot change eligibility, settings, or admin accounts.
 
-No public admin registration. Accounts are created by the Owner, require MFA, and are **disabled** (not deleted) when no longer needed. See Appendix C for the permission matrix.
+No public admin registration. Accounts are created by the Owner, require MFA, and are **disabled** when no longer needed (hard delete exists behind owner-only guards and an audit record). See Appendix C for the permission matrix.
 
 ### 5.2 Entities
 
@@ -273,7 +273,7 @@ Create a Click to Chat URL for an eligible in-stock product. Use the configured 
 
 **Baseline:** OWASP ASVS 5.0.0 [S5], Level 1 fully and Level 2 for authentication, session, and access-control items; track OWASP Top 10:2025 [S6] (A01 is Broken Access Control).
 
-- **AuthN:** managed provider, MFA required (TOTP at minimum; passkeys where the provider supports them); recovery codes stored offline by the owner; accounts disabled, not deleted.
+- **AuthN:** managed provider, MFA required (TOTP at minimum; passkeys where the provider supports them); recovery codes stored offline by the owner; accounts disabled or deleted (guarded and audited).
 - **Sessions:** `__Host-` prefixed cookie, `HttpOnly`, `Secure`, `SameSite=Lax`; idle 12 h; absolute ≤ 30 days with "keep me signed in"; rotate on privilege change; revoke all sessions on password/MFA change.
 - **CSRF:** cookie sessions require double-submit CSRF tokens on all state-changing routes plus an `Origin`/`Referer` check.
 - **AuthZ:** check the role on the **server** for every protected route; deny by default; no object enumeration (admin routes never expose another tenant's data — single shop here, but keep the pattern).
@@ -286,7 +286,7 @@ Create a Click to Chat URL for an eligible in-stock product. Use the configured 
 - **Supply chain (Top 10:2025):** lockfiles committed, automated dependency updates, minimal dependency surface, review before adding packages.
 - **Data at rest:** provider encryption; database not publicly reachable; least-privilege database credentials for the app only.
 
-> **Safeguard** — The current static site's client-side admin gate (SHA-256 password in `config.js`) is a design-stage stand-in and **must not exist in the production deployment**. Production admin access is authenticated on the server only.
+> **Safeguard** — The prototype's client-side admin gate (SHA-256 password in `config.js`) was a design-stage stand-in; it **does not exist in the shipped build**. Production admin access is authenticated on the server only.
 
 ## 11. Reliability, recovery, and error handling
 
@@ -355,7 +355,7 @@ Target: the same screens, fed by the API. No redesign.
 2. **Add a data layer** — `assets/js/api.js` with a source flag (`BB_DATA_SOURCE = "api" | "static"`). It fetches `/bootstrap` + `/catalogue` + `/products/{id}` (+ guides) and exposes the same `BB_DATA`-shaped object the pages already consume.
 3. **Verify parity page-by-page** — home (tiles, featured), catalogue (filters, chips, counts, states), product page (picker, order link, out-of-stock), guides, contact; compare against production static build.
 4. **Flip the default** to `api`; keep `static` as the fallback until the backend is stable for one release cycle.
-5. **Retire the admin prototype** — `admin.html`/`admin-login.js` wire to the real API; the client-side SHA-256 gate and `localStorage` store (`bb_admin_v1`, `bb_admin_session`, `bb_admin_try`) are removed from production builds.
+5. **Retire the admin prototype** — `admin.html`/`admin-login.js` wire to the real API; the client-side SHA-256 gate and `localStorage` store (`bb_admin_v1`, `bb_admin_session`, `bb_admin_try`) have been removed from the shipped build.
 6. **Keep deep links** — `?category=`, `?cat=`, `?id=`, and the `?state=` previews keep working (previews may remain dev-only via the static fallback).
 
 Rollback: set the flag back to `static`. Once the backend is the source of truth, admin edits happen only there — the seed script is one-way and re-runnable idempotently.

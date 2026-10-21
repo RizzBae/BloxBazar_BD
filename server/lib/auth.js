@@ -20,6 +20,10 @@ const { sendProblem } = require("./problem");
 const COOKIE_SESSION = "bb_sess";
 const COOKIE_CSRF = "bb_csrf";
 
+/* A real scrypt hash used for missing accounts so a failed sign-in spends the
+   same work whether or not the email exists. */
+const DUMMY_PASSWORD_HASH = "scrypt:2139f1b96519df554bae31bf2ee6f8ee:3e3098716b9c2c4fc94c3e7c3373c9a95ab232227124e5de49235673ce622b22c4a7d125ae38d61bee3ead58bb2bbb12eed3f668a134094e43a5c26f8053df9c";
+
 /* ---------- Passwords ---------- */
 
 function hashPassword(password) {
@@ -48,6 +52,79 @@ function safeEqual(a, b) {
   const ba = Buffer.from(String(a));
   const bb = Buffer.from(String(b));
   return ba.length === bb.length && crypto.timingSafeEqual(ba, bb);
+}
+
+/* ---------- Password policy & recovery ---------- */
+
+const PASSWORD_MIN_LENGTH = 10;
+const PASSWORD_MAX_LENGTH = 200;
+const EMAIL_MAX_LENGTH = 254;
+const RECOVERY_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const RECOVERY_CODE_LENGTH = 12;
+
+/* Returns a human-readable problem, or null when the password passes. */
+function passwordProblem(password) {
+  if (typeof password !== "string" || password.length < PASSWORD_MIN_LENGTH) {
+    return "Password must be at least " + PASSWORD_MIN_LENGTH + " characters.";
+  }
+  if (password.length > PASSWORD_MAX_LENGTH) {
+    return "Password must be at most " + PASSWORD_MAX_LENGTH + " characters.";
+  }
+  return null;
+}
+
+/* Email doubles as the admin username. Stored lowercase. */
+function emailProblem(email) {
+  if (typeof email !== "string") return "Enter a valid email address.";
+  const value = email.trim();
+  if (!value || value.length > EMAIL_MAX_LENGTH || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+    return "Enter a valid email address.";
+  }
+  return null;
+}
+
+/* ---------- Recovery code ----------
+   A recovery code is the no-email fallback for a forgotten password.
+   It is high-entropy, stored only as a SHA-256 hash, and replaced
+   every time it is used. Format: XXXX-XXXX-XXXX (dashes optional). */
+
+function generateRecoveryCode() {
+  const bytes = crypto.randomBytes(RECOVERY_CODE_LENGTH);
+  let out = "";
+  for (let i = 0; i < RECOVERY_CODE_LENGTH; i += 1) {
+    out += RECOVERY_ALPHABET[bytes[i] % RECOVERY_ALPHABET.length];
+  }
+  return out.slice(0, 4) + "-" + out.slice(4, 8) + "-" + out.slice(8);
+}
+
+function normalizeRecoveryCode(value) {
+  return String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function recoveryCodeHash(value) {
+  return sha256Hex(normalizeRecoveryCode(value));
+}
+
+/* Stores a fresh code hash and returns the plaintext once. */
+function setAdminRecoveryCode(db, adminId) {
+  const code = generateRecoveryCode();
+  db.prepare(
+    "UPDATE admin_user SET recovery_hash = ?, recovery_updated_at = ? WHERE id = ?"
+  ).run(recoveryCodeHash(code), nowIso(), adminId);
+  return code;
+}
+
+function verifyRecoveryCode(row, code) {
+  const stored = row && row.recovery_hash ? String(row.recovery_hash) : "0".repeat(64);
+  return safeEqual(recoveryCodeHash(code), stored);
+}
+
+/* Sets a new password and revokes every session for that account
+   (PRD §10: a reset signs the admin out everywhere). */
+function setAdminPassword(db, adminId, password) {
+  db.prepare("UPDATE admin_user SET password_hash = ? WHERE id = ?")
+    .run(hashPassword(password), adminId);
+  db.prepare("DELETE FROM admin_session WHERE admin_id = ?").run(adminId);
 }
 
 /* ---------- Cookies ---------- */
@@ -119,7 +196,7 @@ function loadSession(db, req, config) {
   const id = sha256Hex(token);
   const row = db.prepare(
     `SELECT s.id, s.admin_id, s.csrf, s.expires_at, s.last_seen_at,
-            a.email, a.role, a.active, a.mfa_enrolled
+            a.email, a.role, a.active, a.mfa_enrolled, a.recovery_hash
        FROM admin_session s
        JOIN admin_user a ON a.id = s.admin_id
       WHERE s.id = ?`
@@ -144,6 +221,7 @@ function loadSession(db, req, config) {
       email: row.email,
       role: row.role,
       mfaEnrolled: !!row.mfa_enrolled,
+      hasRecovery: !!row.recovery_hash,
     },
   };
 }
@@ -197,6 +275,14 @@ module.exports = {
   COOKIE_CSRF,
   hashPassword,
   verifyPassword,
+  passwordProblem,
+  emailProblem,
+  DUMMY_PASSWORD_HASH,
+  generateRecoveryCode,
+  normalizeRecoveryCode,
+  setAdminRecoveryCode,
+  verifyRecoveryCode,
+  setAdminPassword,
   sha256Hex,
   getCookie,
   setSessionCookies,

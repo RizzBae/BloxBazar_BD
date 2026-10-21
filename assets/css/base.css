@@ -2,7 +2,6 @@
    BloxBazaar BD — base.css
    Design tokens, reset, typography, buttons, badges, forms,
    cards, notices, states, utilities.
-   Stage 1 design build — no backend.
    ========================================================= */
 
 /* Wrapped in a cascade layer so Tailwind utilities (highest layer)
@@ -11,24 +10,36 @@
 
 /* ---------- Tokens ---------- */
 :root {
-  /* Canvas & surfaces */
-  --canvas: #F6F8F5;
+  /* Canvas & surfaces — warm ivory cream, keyed to the logo */
+  --canvas: #F7F1E4;
   --surface: #FFFFFF;
-  --surface-2: #EEF2ED;
-  --surface-3: #E6EBE4;
-  --border: #E2E7E0;
-  --border-strong: #CDD5CC;
+  --surface-2: #F0E8D6;
+  --surface-3: #E8DEC8;
+  --border: #E7DDC8;
+  --border-strong: #D5C6A6;
 
   /* Text */
-  --text: #212823;
-  --text-2: #5C675E;
-  --text-3: #6B766D;
+  --text: #25211A;
+  --text-2: #5F5748;
+  --text-3: #70685A;
 
-  /* Brand accent — one deep forest green */
-  --accent: #1F5B3F;
-  --accent-strong: #17492F;
-  --accent-soft: #E7F0E9;
-  --accent-border: #C6DBCB;
+  /* Brand — straight from the logo: deep navy, with gold as the detail accent */
+  --accent: #1E3A78;
+  --accent-strong: #0F2347;
+  --accent-soft: #E9EDF7;
+  --accent-border: #C8D2E6;
+
+  /* Gold — the logo coin, used for accents and the main call to action */
+  --gold: #D9A93F;
+  --gold-hover: #C08E2C;
+  --gold-strong: #8A6417;
+  --gold-soft: #F6EACB;
+  --gold-border: #E8D2A0;
+
+  /* Success — stock and availability keep their green meaning */
+  --ok: #1F5B3F;
+  --ok-soft: #E7F0E9;
+  --ok-border: #C6DBCB;
 
   /* WhatsApp — used only for WhatsApp actions */
   --wa: #25D366;
@@ -55,8 +66,8 @@
   --r-md: 10px;
   --r-lg: 12px;
   --r-xl: 16px;
-  --shadow-sm: 0 1px 2px rgba(23, 33, 26, 0.05);
-  --shadow-md: 0 6px 24px rgba(23, 33, 26, 0.08);
+  --shadow-sm: 0 1px 2px rgba(38, 33, 24, 0.05);
+  --shadow-md: 0 6px 24px rgba(38, 33, 24, 0.08);
 
   /* Type */
   --font: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue",
@@ -102,6 +113,7 @@ h1 { font-size: clamp(28px, 4.2vw, 40px); font-weight: 700; line-height: 1.15; l
 h2 { font-size: 22px; font-weight: 700; line-height: 1.3; }
 h3 { font-size: 17px; font-weight: 700; line-height: 1.4; }
 h4 { font-size: 15px; font-weight: 700; line-height: 1.4; }
+h1, h2 { color: var(--accent-strong); }
 
 /* ---------- Layout ---------- */
 .container {
@@ -130,7 +142,7 @@ h4 { font-size: 15px; font-weight: 700; line-height: 1.4; }
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-3);
+  color: var(--gold-strong);
   margin-bottom: 8px;
 }
 .section-title { font-size: 26px; line-height: 1.25; font-weight: 700; }
@@ -185,6 +197,9 @@ h4 { font-size: 15px; font-weight: 700; line-height: 1.4; }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover:not(:disabled) { background: var(--accent-strong); }
 
+.btn-gold { background: var(--gold); color: var(--accent-strong); border-color: var(--gold); }
+.btn-gold:hover:not(:disabled) { background: var(--gold-hover); border-color: var(--gold-hover); }
+
 .btn-secondary {
   background: var(--surface);
   color: var(--text);
@@ -238,7 +253,7 @@ h4 { font-size: 15px; font-weight: 700; line-height: 1.4; }
   background: currentColor;
   flex: none;
 }
-.badge-in { background: var(--accent-soft); border-color: var(--accent-border); color: var(--accent-strong); }
+.badge-in { background: var(--ok-soft); border-color: var(--ok-border); color: var(--ok); }
 .badge-out { background: var(--surface-2); border-color: var(--border); color: var(--text-2); }
 .badge-info { background: var(--surface); border-color: var(--border-strong); color: var(--text-2); }
 .badge-warn { background: var(--warn-soft); border-color: var(--warn-border); color: var(--warn); }
@@ -249,7 +264,7 @@ h4 { font-size: 15px; font-weight: 700; line-height: 1.4; }
   cursor: pointer;
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
-.stock-toggle:hover { border-color: var(--accent-border); }
+.stock-toggle:hover { border-color: var(--ok-border); }
 .stock-toggle[aria-pressed="false"]:hover { border-color: var(--border-strong); background: var(--surface-2); }
 
 /* ---------- Category tints ---------- */
@@ -591,9 +606,9 @@ h4 { font-size: 15px; font-weight: 700; line-height: 1.4; }
   height: 34px;
   flex: none;
   border-radius: 50%;
-  background: var(--accent-soft);
-  border: 1px solid var(--accent-border);
-  color: var(--accent-strong);
+  background: var(--gold-soft);
+  border: 1px solid var(--gold-border);
+  color: var(--gold-strong);
   font-size: 15px;
   font-weight: 700;
   display: flex;

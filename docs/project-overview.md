@@ -23,14 +23,12 @@ Two operating modes, both first-class:
 
 | Mode | When | Data |
 |---|---|---|
-| **Static bundle** | `file://`, or any plain static host with no API | `assets/js/config.js` + `assets/js/guides-data.js`; admin edits saved in browser `localStorage` |
+| **Static bundle** | `file://`, or any plain static host with no API | `assets/js/config.js` + `assets/js/guides-data.js`; public storefront only — the admin area requires the backend |
 | **Backend (API)** | Served by `server/` (Express + SQLite) | Real API at `/api/v1`; admin edits persisted server-side |
 
 `assets/js/api.js` auto-detects: `file://` → static; HTTP → API, with silent
-fallback to the static bundle if the API is unreachable. The design demo must
-**always** keep working on a plain static host.
-
-Not a git repository (no version-control history).
+fallback to the static bundle if the API is unreachable. The public storefront
+must **always** keep working on a plain static host; the admin area never does.
 
 ---
 
@@ -46,8 +44,9 @@ Not a git repository (no version-control history).
 - **Hand-written CSS in cascade layers**: `assets/css/base.css` (design
   tokens, reset, buttons, cards, badges, notices, states), `assets/css/screens.css`
   (header/footer chrome, hero, product cards, marketplace, guides, contact),
-  `assets/css/admin.css` (sign-in + admin dashboard). House style: one deep
-  forest-green accent (`#1F5B3F`), no gradients / neon / glassmorphism,
+  `assets/css/admin.css` (sign-in + admin dashboard). House style: logo navy
+  as the primary accent (`#1E3A78`) with the logo's gold (`#D9A93F`) for
+  detail, a warm cream canvas, no gradients / neon / glassmorphism,
   `prefers-reduced-motion` respected.
 - **Fonts**: Google Fonts — Inter + Noto Sans Bengali.
 - **i18n**: dictionary in `assets/js/i18n.js`, `data-i18n` attributes,
@@ -68,8 +67,8 @@ Not a git repository (no version-control history).
 - **SQLite via the built-in `node:sqlite` module** (`DatabaseSync`) — zero
   external DB dependencies, WAL mode. File: `server/data/bloxbazaar.db`.
 - No ORM — raw prepared statements, hand-written DDL.
-- Server-side sessions, scrypt password hashing, CSRF, in-memory rate
-  limiting / lockout (process-local, documented as such).
+- Server-side sessions, scrypt password hashing, recovery codes, CSRF,
+  in-memory rate limiting / lockout (process-local, documented as such).
 - **RFC 9457 `application/problem+json`** error responses everywhere.
 - Tests with the built-in **`node:test`** runner.
 
@@ -95,8 +94,9 @@ BloxBazaar BD/
 ├── guide-*.html ×5             Game guides (Robux, Blox Fruits, MM2, Rivals,
 │                               Steal a Brainrot)
 ├── admin.html                  Admin dashboard (server-gated; table, drawer,
-│                               stock toggles, settings, guides)
-├── admin-login.html            Owner sign-in gate
+│                               stock toggles, settings, account/recovery, team)
+├── admin-login.html            Admin sign-in gate (email + password)
+├── admin-forgot.html           Password reset with a recovery code
 │
 ├── assets/
 │   ├── css/
@@ -110,23 +110,23 @@ BloxBazaar BD/
 │   │   ├── products/           Product/category artwork (jpg)
 │   │   └── logo.png            OLD logo — kept on disk, no longer referenced
 │   └── js/
-│       ├── config.js           window.BB_DATA: static data bundle (29 products,
+│       ├── config.js           window.BB_DATA: bundled fallback (29 products,
 │       │                       5 categories, robuxRules, brand, whatsappNumber
-│       │                       + whatsappTemplates, admin.passwordHash [static
-│       │                       gate], localStorage admin overrides)
+│       │                       + whatsappTemplates) used when the API is
+│       │                       unreachable
 │       ├── guides-data.js      window.BB_GUIDES: guide content
 │       ├── i18n.js             EN/BN dictionary + helpers
 │       ├── site.js             Chrome (header/footer render), lang control,
-│       │                       static admin-session helpers, boot flow
+│       │                       helpers, boot flow
 │       ├── api.js              window.BB_API: data layer (public + admin
 │       │                       fetch wrappers, CSRF header, static fallback)
 │       ├── components.js       Shared render helpers (cards etc.)
 │       ├── home.js             / catalogue.js / product.js / guides.js /
 │       │                       contact.js  — page controllers (render on bb:ready)
-│       ├── admin-gate.js       Early redirect gate for admin.html
-│       ├── admin-login.js      Sign-in (API mode + static demo)
-│       └── admin.js            Dashboard controller (API mode + static
-│                               localStorage mode key "bb_admin_v1")
+│       ├── admin-gate.js       Pre-render hide for admin.html
+│       ├── admin-login.js      Sign-in (server API only)
+│       ├── admin-forgot.js     Recovery-code reset (email + code + password)
+│       └── admin.js            Dashboard controller (server API only)
 │
 ├── server/                     Local backend (optional — the site works without)
 │   ├── index.js                Entry: open DB → seed if empty → listen
@@ -135,25 +135,26 @@ BloxBazaar BD/
 │   ├── .env.example            Documented env vars
 │   ├── db.js                   SQLite open + full schema DDL
 │   ├── seed.js                 One-time import from config.js/guides-data.js
+│   ├── admin-reset.js          CLI admin password reset (npm run admin:reset)
 │   ├── routes/
 │   │   ├── public.js           Read-only public API
-│   │   └── admin.js            Authenticated admin API
+│   │   └── admin.js            Admin API (auth, accounts, recovery, writes)
 │   ├── lib/
-│   │   ├── auth.js             scrypt, sessions, CSRF, role middleware
+│   │   ├── auth.js             scrypt, sessions, CSRF, recovery codes, roles
 │   │   ├── validate.js         Field-level validation for all writes
 │   │   ├── serialize.js        Row → JSON (public vs admin shapes)
 │   │   ├── images.js           Upload processing (sharp)
 │   │   ├── ratelimit.js        Sliding-window limiter + escalating lockout
 │   │   └── problem.js          problem+json helpers
 │   ├── data/                   bloxbazaar.db (+ WAL/SHM), uploads/
-│   └── test/api.test.js        17 API tests (node --test)
+│   └── test/api.test.js        22 API tests (node --test)
 │
 ├── docs/
 │   ├── backend-prd.md          Backend PRD v2.0 (the governing spec)
 │   ├── backend-prd.html        Rendered version of the same
 │   └── project-overview.md     This document
 │
-├── package.json                Scripts: server/start/seed/test/build:css/watch:css
+├── package.json                Scripts: server/start/seed/admin:reset/test/build:css/watch:css
 └── README.md                   Owner-facing docs: run modes, file map, notes
 ```
 
@@ -169,11 +170,12 @@ BloxBazaar BD/
 | GET | `/catalogue.html` | The "Marketplace" page (name changed in UI; URL unchanged) |
 | GET | `/product.html?id=…` | Product detail |
 | GET | `/guide-*.html`, `/how-it-works.html`, `/contact.html` | Static pages |
-| GET | `/admin-login.html` | Sign-in page |
+| GET | `/admin-login.html` | Admin sign-in page (email + password) |
+| GET | `/admin-forgot.html` | Password reset with a recovery code |
 | GET | `/admin.html` | **Server-gated**: without a session → `302` to `/admin-login.html?next=…` |
 | GET | `/healthz` | `{ "status": "ok", "version": "1.0.0" }` |
 | GET | `/uploads/*` | Uploaded images — immutable, `Cache-Control` 1 year |
-| — | `/server/*`, `/node_modules/*`, `/.git/*`, `/.env`, `/package.json`, `/package-lock.json`, `/.gitignore` | **Blocked** (404) |
+| — | everything else (server code, docs, dot-files, `package.json`, encoded variants) | **Blocked** (404) — an allow-list serves only root `*.html`, `/assets/*`, and `/uploads/*` after decoding/normalizing the path |
 | — | `/assets/*` | Served with `Cache-Control: no-cache` (revalidate so edits show) |
 
 ### 4.2 Public API — `/api/v1` (no auth; read-only)
@@ -201,16 +203,25 @@ front-end compatibility.)
 
 ### 4.3 Admin API — `/api/v1/admin`
 
-Session cookie required for everything except `POST /session`. All **writes**
-require the CSRF header `x-csrf-token` (value = `bb_csrf` cookie) and pass an
-origin/host check. Rate limits: reads **240/min**, writes **60/min**, uploads
-**20/hour** (per admin or IP).
+Session cookie required for everything except `POST /session` and
+`POST /password/recover`. All **writes** with a session require the CSRF header
+`x-csrf-token` (value = `bb_csrf` cookie) and pass an origin/host check. Rate
+limits: reads **240/min**, writes **60/min**, uploads **20/hour**, sign-in and
+recovery attempts **20/min per IP**. Recovery guesses additionally lock per
+account (**5 fails / 15 min**) and per IP (**12 fails / 15 min**).
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/api/v1/admin/session` | `{ email, password, remember? }` → sets `bb_sess` (HttpOnly) + `bb_csrf` cookies. `401` wrong creds; `429` + `Retry-After` when locked out. |
-| GET | `/api/v1/admin/session` | `{ admin: { id, email, role, mfaEnrolled } }` |
+| POST | `/api/v1/admin/session` | `{ email, password, remember? }` → sets `bb_sess` (HttpOnly) + `bb_csrf` cookies. `401` wrong creds; `429` + `Retry-After` when locked out. Responds with `{ admin: { id, email, role, mfaEnrolled, hasRecovery } }`. |
+| POST | `/api/v1/admin/password/recover` | Public. `{ email, recoveryCode, password }` — verifies the single-use code, sets a new password, revokes every session, rotates the code. Always `401` with the same message for a bad email/code; `429` when locked out. Returns `{ ok: true, recoveryCode }` once. |
+| GET | `/api/v1/admin/session` | `{ admin: { id, email, role, mfaEnrolled, hasRecovery } }` |
 | DELETE | `/api/v1/admin/session` | `204`; clears cookies (CSRF required) |
+| POST | `/api/v1/admin/account` | Self-service. `{ email, currentPassword, newPassword? }` — requires the current password; changes the signed-in admin's email and/or password. A password change revokes all sessions then issues a fresh one for this client. `409` on a duplicate email. |
+| POST | `/api/v1/admin/account/recovery` | Self-service. `{ currentPassword }` — generates a fresh recovery code, replacing the old one. The code is returned once; only its SHA-256 is stored. |
+| GET | `/api/v1/admin/admins` | **Owner only.** Team list: `{ items: [{ id, email, role, active, mfaEnrolled, hasRecovery, lastSignInAt, createdAt }] }`. Never includes password or recovery hashes. |
+| POST | `/api/v1/admin/admins` | **Owner only.** `{ email, password, role? }` → `201 { admin, recoveryCode }`. The recovery code is shown once for private handoff. `409` duplicate email; `422` weak password/bad role. |
+| PATCH | `/api/v1/admin/admins/:id` | **Owner only.** Partial `{ email?, role?, active? }`. Deactivating deletes the target's sessions. Self-deactivation and removing the last active owner are blocked (`422`). |
+| DELETE | `/api/v1/admin/admins/:id` | **Owner only.** `204`. Permanently deletes the account and every session it holds. Self-deletion and deleting the last active owner are blocked (`422`); the audit trail keeps the record of it. |
 | GET | `/api/v1/admin/products` | `?state=all\|in\|out\|review\|draft\|archived&q&page&limit`. Returns **admin shape** (internals included). |
 | POST | `/api/v1/admin/products` | Create. Safe defaults always: `draft` + `review` + `out`. `id`/`sku` auto-generated when absent (`BB-<CAT>-<price>` SKUs). `201` + admin shape. |
 | PATCH | `/api/v1/admin/products/:id` | Partial update of any field (validated). Version-guarded. |
@@ -220,7 +231,7 @@ origin/host check. Rate limits: reads **240/min**, writes **60/min**, uploads
 | DELETE | `/api/v1/admin/products/:id` | **Owner only**; `422` if published ("Unpublish or archive this product first."). Hard-deletes only non-published rows. |
 | POST | `/api/v1/admin/uploads` | Multipart field `file` ≤ 2 MB; JPEG/PNG/WebP; ≥64×64; re-encoded (strips EXIF/payloads); random key `uploads/<uuid>.<ext>`; returns `{ key, url, width, height, bytes }` |
 | GET / PUT | `/api/v1/admin/settings` | Shop settings (brand, WhatsApp number, order-message templates, support email/hours, default locale, Robux rules). PUT is a **partial merge**, **owner only**, version-guarded. Surfaced in the admin **Shop settings** tab. |
-| GET | `/api/v1/admin/audit` | `?entity_type&entity_id&page&limit` — audit trail with actor email |
+| GET | `/api/v1/admin/audit` | **Owner only.** `?entity_type&entity_id&page&limit` — audit trail with actor email |
 | GET | `/api/v1/admin/guides` | All guides (incl. drafts) |
 | PATCH | `/api/v1/admin/guides/:id` | `{ name?, tagline?, content?, publication? }`, version-guarded |
 
@@ -282,8 +293,10 @@ public cache-busting counter.
 
 **category** — `id TEXT PK · en · bn · image_key · display_order · visible`
 
-**admin_user** — `id TEXT PK · email UNIQUE · password_hash ("scrypt:<salt>:<hash>") ·
-role ('owner'|'editor') · active · mfa_enrolled · last_sign_in_at · created_at`
+**admin_user** — `id TEXT PK · email UNIQUE (case-insensitive index) ·
+password_hash ("scrypt:<salt>:<hash>") · role ('owner'|'editor') · active ·
+mfa_enrolled · recovery_hash (SHA-256 of the recovery code, nullable) ·
+recovery_updated_at · last_sign_in_at · created_at`
 
 **product** — `id TEXT PK · sku TEXT UNIQUE · name JSON{en,bn} · short JSON ·
 description JSON · includes JSON[] · category_id FK→category · price INTEGER
@@ -334,12 +347,35 @@ defaultAmount 100, presets 40…100000, tiers 5 with rate 1.30 → 0.98 BDT/Robu
 - **CSRF**: `bb_csrf` cookie (readable by same-origin JS) mirrored into the
   `x-csrf-token` header on every write; plus an origin-must-match-host check.
   (`api.js` attaches the header automatically.)
-- **Roles**: `owner` (everything) vs `editor` (cannot change eligibility
-  state or delete products). Seeded accounts are owners.
+- **Roles**: `owner` (everything, including the Team tab) vs `editor` (manage
+  products and shop settings; cannot change eligibility, delete products, or
+  manage admin accounts). Seeded accounts are owners.
 - **Sign-in lockout** (escalating, in-memory): per account **5 fails / 15 min**,
   per IP **10 fails / 15 min**; lock duration doubles each time (15 min base,
   capped ×8). Locked attempts return `429` + `Retry-After` — even for the
   correct password until the lock expires.
+- **Admin accounts**: owners create accounts with an email, role, and password,
+  and can change a teammate's role, deactivate, or delete later. Deactivation
+  deletes the target's sessions immediately; deletion ends every session and
+  removes the account. Self-deactivation/self-deletion is refused, and any
+  update or deletion that would leave **no active owner** is refused. Every
+  change is recorded in `audit_event`.
+- **Self-service account**: `POST /account` requires the current password to
+  change the signed-in admin's email and/or password. A password change deletes
+  every session for the account (including the caller's) and then issues a fresh
+  session to the caller, so other devices are signed out.
+- **Password recovery without email**: each admin can generate a
+  `XXXX-XXXX-XXXX` recovery code in the **Account** tab. Only its SHA-256 is
+  stored;
+  generating a new code replaces the old one. `POST /password/recover` verifies
+  email + code + new password, rotates the code on success, and revokes every
+  session. A bad email or code returns the same `401` message (no account
+  enumeration), and guesses are locked out per account (5/15 min) and per IP
+  (12/15 min). The `npm run admin:reset` CLI is the offline fallback and prints
+  a fresh recovery code.
+- **Auth rate limit**: password recovery and self-service account writes are
+  limited to **20/min per IP** (`BB_AUTH_RATE_PER_MIN`), on top of the recovery
+  lockouts above.
 - **Admin page gate**: `/admin.html` redirects server-side without a session;
   the client gate (`admin-gate.js`) hides the page pre-render too.
 - **Security headers** (all responses): `X-Content-Type-Options: nosniff`,
@@ -349,20 +385,18 @@ defaultAmount 100, presets 40…100000, tiers 5 with rate 1.30 → 0.98 BDT/Robu
   images `self`+`data:`; connect `self`), and HSTS when HTTPS.
 - Rate limiting is in-memory / process-local (single-instance by design).
 
-### Static mode (design demo only)
-- Client-side gate: SHA-256 of the entered password compared against
-  `config.js → admin.passwordHash`; session object in
-  `sessionStorage`/`localStorage` under `bb_admin_session`; 5 wrong attempts →
-  60-second lockout. **Presentation only — not real security** (documented in
-  README). Admin edits live in `localStorage` under `bb_admin_v1` (products)
-  and `bb_admin_settings_v1` (WhatsApp number + order-message templates);
-  `config.js` re-applies both on load.
+### Static mode (public storefront only)
+- No client-side authentication exists. `admin.html`, `admin-login.html`, and
+  `admin-forgot.html` detect the missing backend and explain that the server
+  version is required; there is no browser password check or stored session.
+- The public pages render from `config.js` / `guides-data.js` exactly like the
+  API payloads, so the storefront works from `file://` or any static host.
 
-### Credentials (seeded — demo)
-- Backend owner: `owner@bloxbazaar.local` / `BloxBazaar@2026` (env-overridable
-  via `BB_SEED_ADMIN_EMAIL` / `BB_SEED_ADMIN_PASSWORD`; **change before real
-  use**).
-- Static demo password: `BloxBazaar@2026`.
+### Credentials (seeded)
+- Backend owner: `owner@bloxbazaar.local`. The password comes from
+  `BB_SEED_ADMIN_PASSWORD`; when that is unset, the first seed generates a
+  strong random password and prints it once. Change it after the first
+  sign-in with `npm run admin:reset` or the account form in Settings.
 
 ---
 
@@ -383,11 +417,15 @@ Copy `server/.env.example` → `server/.env`. Defaults in `server/config.js`:
 | `BB_SIGNIN_ACCOUNT_MAX` | `5` | Fails before account lockout |
 | `BB_SIGNIN_IP_MAX` | `10` | Fails before IP lockout |
 | `BB_SIGNIN_WINDOW_MIN` | `15` | Lockout window |
+| `BB_RECOVERY_ACCOUNT_MAX` | `5` | Recovery-code failures before account lock |
+| `BB_RECOVERY_IP_MAX` | `12` | Recovery-code failures before IP lock |
+| `BB_RECOVERY_WINDOW_MIN` | `15` | Recovery lockout window (minutes) |
+| `BB_AUTH_RATE_PER_MIN` | `20` | Sign-in + recovery attempts per IP |
 | `BB_PUBLIC_RATE_PER_MIN` | `120` | Public API |
 | `BB_ADMIN_READ_RATE_PER_MIN` | `240` | Admin reads |
 | `BB_ADMIN_WRITE_RATE_PER_MIN` | `60` | Admin writes |
 | `BB_UPLOAD_RATE_PER_HOUR` | `20` | Uploads |
-| `BB_SEED_ADMIN_EMAIL` / `BB_SEED_ADMIN_PASSWORD` | see §6 | First-run owner |
+| `BB_SEED_ADMIN_EMAIL` / `BB_SEED_ADMIN_PASSWORD` | `owner@bloxbazaar.local` / unset → random | First-run owner; when unset, a strong random password is generated and printed once by `npm run seed` |
 
 `0` disables a limiter (local dev).
 
@@ -406,9 +444,10 @@ Copy `server/.env.example` → `server/.env`. Defaults in `server/config.js`:
   (EN) / "মার্কেটপ্লেস" (BN) in all UI copy, but the file/URL stays
   `catalogue.html` and the API namespace stays `/catalogue` (link stability).
   i18n key *names* (e.g. `nav.catalogue`) are internal and unchanged.
-- **State preview hooks (design review)**: `catalogue.html?state=loading|
-  empty|error`, `admin.html?state=empty`, `admin.html?drawer=edit&id=<id>`,
-  `admin.html?drawer=new`. `admin-login.html?next=…` preserves deep links.
+- **State preview hooks (testing)**: `catalogue.html?state=loading|empty|error`
+  and `product.html?state=loading|error` render those states; `admin.html`
+  accepts `?drawer=add` / `?drawer=edit&id=<id>` and `?tab=settings`.
+  `admin-login.html?next=…` preserves deep links.
 - **Brand**: UI chrome uses the owner-supplied SVG set in
   `assets/img/website logo/` — `logo_primary.svg` (header + footer),
   `mark_only.svg` (admin top bar; header ≤480 px via `<picture>`),
@@ -425,7 +464,7 @@ npm install                 # express, multer, sharp (+ tailwind dev deps)
 npm run server              # start backend at http://127.0.0.1:4173
 npm run seed                # one-time import from config.js/guides-data.js
                             # (idempotent: existing rows are never overwritten)
-npm test                    # 17 API tests, node --test server/test/**/*.test.js
+npm test                    # 22 API tests, node --test server/test/**/*.test.js
 npm run build:css           # rebuild tailwind.css from tailwind.src.css
 npm run watch:css           # the same, in watch mode
 ```
@@ -436,30 +475,38 @@ file directly or host the folder anywhere.
 
 ---
 
-## 10. Tests (server/test/api.test.js — 17 passing)
+## 10. Tests (server/test/api.test.js — 22 passing)
 
 Covers: public bootstrap/catalogue filters/detail/guides; dataVersion ETag +
 304; admin auth requirement + CSRF enforcement; full admin listing; create
 defaults (draft/review/out); publish gating (approval, image, Bangla text);
 featured rules + auto-unfeature; optimistic concurrency 428/409/200;
 archive-never-hard-delete for published products; editor role restrictions
-(no eligibility, no delete); settings partial merge + validation + version
-guards; upload re-encode + junk/oversize rejection; guides list + patch;
-sign-in lockout escalation; public rate limiter 429 + Retry-After; static
-serving + admin page gate + security headers.
+(no eligibility, no delete, no audit access); settings partial merge +
+validation + version guards; upload re-encode + junk/oversize rejection; guides
+list + patch (attribute-breaking link URLs rejected); sign-in lockout
+escalation; public rate limiter 429 + Retry-After; static allow-list (encoded
+traversal paths 404) + admin page gate (case/encoded variants) + `no-store`
+private responses + security headers; owner-only team management
+(add/disable/reactivate/delete, editor denial, duplicate email, self guards and
+last-owner guards for both disable and delete); self-service email/password
+change with session revocation;
+recovery-code generation, one-time reset, code rotation, old-code rejection,
+weak-password validation, and per-account lockout after repeated guesses.
 
 ---
 
 ## 11. Seeded data (from the static bundle)
 
 - **29 products** total; **26 public** (published + approved).
-- Non-public demo states preserved on purpose: `mm2-sweet-set` (draft),
+- Seeded non-public states preserved on purpose: `mm2-sweet-set` (draft),
   `sb-cash-pack` (draft + needs review + out of stock), `bf-leopard`
   (archived). `bf-fruit-notifier` is public but out of stock.
 - **5 categories** (robux, blox-fruits, mm2, rivals, steal-a-brainrot),
   **5 guides**.
-- The WhatsApp number ships **empty** on purpose (placeholder text is shown).
-  Never invent it — the owner must provide it (README has the checklist).
+- The WhatsApp number and support email/hours ship **empty** on purpose; the
+  storefront hides those contact values until the owner sets them in the admin
+  **Shop settings** tab. Never invent them (README has the checklist).
 
 ---
 
@@ -470,11 +517,13 @@ serving + admin page gate + security headers.
    `docs/backend-prd.md` v2.0.
 2. **No customer PII server-side** — the Roblox username lives only in the
    visitor's browser/WhatsApp message.
-3. **Two modes must both keep working**: full backend AND the static
-   `file://`/plain-host design demo (with `?state=` previews).
+3. **Two modes must both keep working**: the full backend AND the static
+   `file://`/plain-host storefront. The admin area is server-only and must
+   never gain a client-side password check.
 4. **State rules are enforced server-side** — never move them client-only.
-5. **Never invent values** (WhatsApp number, prices, eligibility evidence):
-   safe defaults + explicit placeholders only.
+5. **Never invent values** (WhatsApp number, support contact, prices,
+   eligibility evidence): use safe defaults and keep unset values out of the
+   UI until the owner provides them.
 6. **Rollback story**: serve the site statically (feature flag is the data
    source itself — `config.js` bundle vs API).
 7. UI language: any new user-facing string should exist in EN + BN in

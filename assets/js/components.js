@@ -62,7 +62,7 @@ window.BB_COMP = (function () {
   }
 
   function guideCard(g) {
-    return '<a class="guide-card' + catClass(g.id) + '" href="guide-' + g.id + '.html">' +
+    return '<a class="guide-card' + catClass(g.id) + '" href="guide-' + T.esc(g.id) + '.html">' +
       '<span class="gc-top">' +
         '<span class="gc-name">' + T.esc(T.bg(g.name)) + "</span>" +
         '<span class="badge badge-info">' + T.t("badge.guide") + "</span>" +

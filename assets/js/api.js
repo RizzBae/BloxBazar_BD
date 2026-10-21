@@ -3,10 +3,10 @@
    Data layer. When the site runs on the backend, this fetches
    the catalogue, guides, and shop settings from /api/v1 and
    populates the same window.BB_DATA / window.BB_GUIDES shapes
-   the design stage used, so the page scripts stay unchanged.
+   as the bundled fallback, so page scripts stay unchanged.
    On file:// (or when the API is unreachable) it falls back to
-   the static bundle loaded from config.js — the design demo
-   keeps working without a server.
+   the static bundle loaded from config.js, so the public
+   storefront still renders without a server.
 
    Switch (optional): window.BB_DATA_SOURCE = "static" pins the
    static bundle; "api" logs API failures loudly instead of
@@ -77,8 +77,6 @@ window.BB_API = (function () {
   /* ---------- Public data ---------- */
 
   function applyBundle(bootstrap, catalogue, guides) {
-    var lang = "en";
-    try { lang = localStorage.getItem("bb_lang") || "en"; } catch (e) { /* file:// */ }
     var hours = (bootstrap.supportHours || {});
 
     window.BB_DATA = {
@@ -90,11 +88,8 @@ window.BB_API = (function () {
         product: (bootstrap.whatsappTemplates && bootstrap.whatsappTemplates.product) || "",
         robux: (bootstrap.whatsappTemplates && bootstrap.whatsappTemplates.robux) || ""
       },
-      placeholders: {
-        whatsappNumber: bootstrap.whatsappNumber || "[WhatsApp number to be added]",
-        supportEmail: bootstrap.supportEmail || "[Support email to be added]",
-        supportHours: hours[lang] || hours.en || "[Support hours to be added]"
-      },
+      supportEmail: bootstrap.supportEmail || "",
+      supportHours: hours,
       categories: bootstrap.categories || [],
       products: (catalogue && catalogue.items) || []
     };
@@ -112,7 +107,7 @@ window.BB_API = (function () {
       return Promise.resolve({ source: "static" });
     }
     if (!httpMode) {
-      /* file:// — the design demo runs on the static bundle. */
+      /* file:// — no API is reachable, so the static bundle is used. */
       mode = "static";
       return Promise.resolve({ source: "static" });
     }
@@ -145,6 +140,18 @@ window.BB_API = (function () {
       return adminFetch("/session", "POST", { email: email, password: password, remember: !!remember });
     },
     signOut: function () { return adminFetch("/session", "DELETE"); },
+    updateAccount: function (payload) { return adminFetch("/account", "POST", payload); },
+    newRecoveryCode: function (payload) { return adminFetch("/account/recovery", "POST", payload); },
+    recoverPassword: function (payload) { return adminFetch("/password/recover", "POST", payload); },
+
+    listAdmins: function () { return adminFetch("/admins"); },
+    createAdmin: function (payload) { return adminFetch("/admins", "POST", payload); },
+    updateAdmin: function (id, payload) {
+      return adminFetch("/admins/" + encodeURIComponent(id), "PATCH", payload);
+    },
+    deleteAdmin: function (id) {
+      return adminFetch("/admins/" + encodeURIComponent(id), "DELETE");
+    },
 
     listProducts: function (params) {
       var qs = params ? "?" + new URLSearchParams(params).toString() : "";

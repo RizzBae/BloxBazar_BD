@@ -58,6 +58,9 @@ function seedAll(db, options) {
 
   const seedNote = "Imported from the static catalogue on " + nowIso().slice(0, 10) +
     " — owner records the evidence basis and review date (PRD decision D-1).";
+  const generatedPassword = !seedConfig.seedAdminPassword;
+  const seedPassword = seedConfig.seedAdminPassword ||
+    ("BB-" + crypto.randomBytes(9).toString("base64url"));
 
   db.exec("BEGIN IMMEDIATE");
   try {
@@ -98,11 +101,12 @@ function seedAll(db, options) {
       db.prepare(
         `INSERT INTO admin_user (id, email, password_hash, role, active, mfa_enrolled, created_at)
          VALUES (?, ?, ?, 'owner', 1, 0, ?)`
-      ).run(crypto.randomUUID(), seedConfig.seedAdminEmail, hashPassword(seedConfig.seedAdminPassword), nowIso());
+      ).run(crypto.randomUUID(), seedConfig.seedAdminEmail, hashPassword(seedPassword), nowIso());
       report.admin = seedConfig.seedAdminEmail;
+      if (generatedPassword) report.adminPassword = seedPassword;
     }
 
-    /* Products — every demo state is preserved (draft, needs-review,
+    /* Products — every seeded state is preserved (draft, needs-review,
        archived, out-of-stock) so the admin table renders as designed. */
     const insertProduct = db.prepare(INSERT_PRODUCT_OR_IGNORE);
     (bb.products || []).forEach(function (p) {
@@ -184,8 +188,14 @@ if (require.main === module) {
   const config = require("./config");
   const db = openDatabase(config.dbPath);
   const report = seedAll(db, { rootDir: config.rootDir, config });
+  const adminPassword = report.adminPassword;
+  delete report.adminPassword;
   console.log("[bb-seed] Import complete:");
   console.log(JSON.stringify(report, null, 2));
   console.log("[bb-seed] Admin sign-in: " + config.seedAdminEmail);
+  if (adminPassword) {
+    console.log("[bb-seed] First-run owner password: " + adminPassword);
+    console.log("[bb-seed] Save it now, then change it in Shop settings.");
+  }
   db.close();
 }

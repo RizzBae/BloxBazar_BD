@@ -21,7 +21,7 @@
   function wayCard(w) {
     var link = "";
     if (w.link) {
-      link = '<a class="way-link" href="' + w.link + '"' + (w.internal ? "" : ' target="_blank" rel="noopener"') + ">" +
+      link = '<a class="way-link" href="' + T.esc(w.link) + '"' + (w.internal ? "" : ' target="_blank" rel="noopener"') + ">" +
         '<span>' + T.esc(T.bg(w.linkLabel)) + "</span>" + (w.internal ? T.icon.arrowRight : T.icon.external) +
       "</a>";
     }
@@ -32,7 +32,7 @@
   }
 
   function linkCard(l) {
-    return '<a class="link-card" href="' + l.url + '" target="_blank" rel="noopener">' +
+    return '<a class="link-card" href="' + T.esc(l.url) + '" target="_blank" rel="noopener">' +
       '<span class="lc-top"><span class="lc-title">' + T.esc(T.bg(l.label)) + "</span>" + T.icon.external + "</span>" +
       '<span class="lc-desc">' + T.esc(T.bg(l.note)) + "</span>" +
     "</a>";
@@ -58,7 +58,7 @@
     var others = Object.keys(BB_GUIDES).filter(function (id) { return id !== g.id; });
     var more = others.map(function (id) {
       var og = BB_GUIDES[id];
-      return '<a class="more-link" href="guide-' + id + '.html">' +
+      return '<a class="more-link" href="guide-' + T.esc(id) + '.html">' +
         "<span>" + T.esc(T.bg(og.name)) + "</span>" + T.icon.arrowRight +
       "</a>";
     }).join("");

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reset admin password — BloxBazaar BD</title>
+  <meta name="description" content="Reset the BloxBazaar BD admin password with a recovery code.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="assets/img/website%20logo/favicon_navy_gold.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/tailwind.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/screens.css">
+  <link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body>
+  <main class="login-page" id="main">
+    <div class="login-card">
+      <div class="login-head">
+        <a class="wordmark" href="index.html"><img src="assets/img/website%20logo/logo_stacked.svg" alt="BloxBazaar BD"></a>
+        <h1 class="login-title" data-i18n="admin.recoverTitle">Reset password</h1>
+        <p class="login-sub" data-i18n="admin.recoverSub">Enter your admin email and recovery code, then choose a new password.</p>
+      </div>
+
+      <div class="login-error" id="forgot-error" role="alert">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+        <span data-i18n="admin.recoverFailed">Could not reset the password. Check your details and try again.</span>
+      </div>
+
+      <form id="recover-form" novalidate>
+        <div class="field" id="f-recover-email">
+          <label class="field-label" for="recover-email" data-i18n="admin.email">Email</label>
+          <input class="input" id="recover-email" type="email" autocomplete="username" spellcheck="false" maxlength="254">
+          <p class="field-error" data-i18n="admin.invalidEmail">Enter a valid email address.</p>
+        </div>
+
+        <div class="field" id="f-recover-code">
+          <label class="field-label" for="recover-code" data-i18n="admin.recoveryCode">Recovery code</label>
+          <input class="input" id="recover-code" type="text" autocomplete="off" spellcheck="false" autocapitalize="characters" placeholder="XXXX-XXXX-XXXX" maxlength="20">
+          <p class="field-hint" data-i18n="admin.recoveryCodeHint">The 12-character code from Settings. Dashes are optional.</p>
+          <p class="field-error" data-i18n="admin.recoveryCodeRequired">Enter your recovery code.</p>
+        </div>
+
+        <div class="field" id="f-recover-password">
+          <label class="field-label" for="recover-password" data-i18n="admin.pwNew">New password</label>
+          <div class="pw-wrap">
+            <input class="input" id="recover-password" type="password" autocomplete="new-password" maxlength="200">
+            <button class="pw-toggle" id="recover-pw-toggle" type="button" aria-label="Show password" aria-pressed="false" data-i18n-aria="admin.showPassword">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.8"/></svg>
+            </button>
+          </div>
+          <p class="field-hint" data-i18n="admin.pwNewHint">At least 10 characters.</p>
+          <p class="field-error" data-i18n="admin.pwMin">Use at least 10 characters.</p>
+        </div>
+
+        <div class="field" id="f-recover-confirm">
+          <label class="field-label" for="recover-confirm" data-i18n="admin.pwConfirm">Confirm new password</label>
+          <input class="input" id="recover-confirm" type="password" autocomplete="new-password" maxlength="200">
+          <p class="field-error" data-i18n="admin.pwMismatch">The passwords do not match.</p>
+        </div>
+
+        <button class="btn btn-primary btn-block" id="recover-submit" type="submit" data-i18n="admin.recoverSubmit">Set new password</button>
+      </form>
+
+      <div class="recover-success" id="recover-success" role="status" hidden>
+        <div class="recover-success-head">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.2 2.4 2.4 4.6-4.9"/></svg>
+          <div>
+            <h2 class="recover-success-title" data-i18n="admin.recoverDoneTitle">Password updated</h2>
+            <p class="recover-success-text" data-i18n="admin.recoverDone">Save your new recovery code. It replaces the old one and is shown only once.</p>
+          </div>
+        </div>
+        <div class="recovery-code-row">
+          <code class="login-code" id="recover-new-code"></code>
+          <button class="btn btn-secondary btn-sm" id="copy-recover-code" type="button" data-i18n="admin.copyCode">Copy</button>
+        </div>
+        <a class="btn btn-primary btn-block" href="admin-login.html" data-i18n="admin.forgotBack">Back to sign in</a>
+      </div>
+
+      <div class="login-note" id="cli-note">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5m0-3h.01"/></svg>
+        <div>
+          <strong class="login-note-title" data-i18n="admin.forgotCliTitle">Lost your recovery code?</strong>
+          <p class="login-note-text" data-i18n="admin.forgotCli">Ask the person who runs the server to run this command:</p>
+          <code class="login-code">npm run admin:reset</code>
+        </div>
+      </div>
+      <p class="login-forgot" id="backend-note" hidden data-i18n="admin.pwBackendOnly">Password recovery needs the backend version of the site.</p>
+
+      <p class="login-back"><a href="admin-login.html" data-i18n="admin.forgotBack">Back to sign in</a></p>
+    </div>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/i18n.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/site.js"></script>
+  <script src="assets/js/admin-forgot.js"></script>
+</body>
+</html>

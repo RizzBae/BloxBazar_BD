@@ -12,12 +12,21 @@
 
 "use strict";
 
+const crypto = require("node:crypto");
 const express = require("express");
 const multer = require("multer");
 const { nowIso, getSettingsRow, bumpDataVersion, transaction } = require("../db");
 const { sendProblem, fieldError } = require("../lib/problem");
 const {
   verifyPassword,
+  hashPassword,
+  passwordProblem,
+  emailProblem,
+  DUMMY_PASSWORD_HASH,
+  normalizeRecoveryCode,
+  setAdminRecoveryCode,
+  verifyRecoveryCode,
+  setAdminPassword,
   createSession,
   destroySession,
   setSessionCookies,
@@ -74,6 +83,14 @@ function jsonOrNull(value) {
 module.exports = function adminRoutes(db, config) {
   const router = express.Router();
 
+  /* Session, account, recovery, and admin data must never be stored by a
+     browser cache or a shared proxy. */
+  router.use(function (req, res, next) {
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Pragma", "no-cache");
+    next();
+  });
+
   const readLimiter = createLimiter({
     windowMs: 60000,
     max: config.adminReadRatePerMin,
@@ -101,9 +118,30 @@ module.exports = function adminRoutes(db, config) {
     baseLockMs: 15 * 60000,
   });
 
+  /* Sign-in and password-recovery attempts, keyed by IP. */
+  const authLimiter = createLimiter({
+    windowMs: 60000,
+    max: config.authRatePerMin,
+    keyFn: (req) => "auth:" + req.ip,
+  });
+
+  /* A recovery code is the only credential on the public reset endpoint,
+     so failed guesses are locked out per account and per IP. */
+  const recoveryWindowMs = Math.max(1, config.recoveryWindowMin) * 60000;
+  const recoveryAccountLockout = createLockout({
+    maxFails: Math.max(1, config.recoveryAccountMax),
+    windowMs: recoveryWindowMs,
+    baseLockMs: recoveryWindowMs,
+  });
+  const recoveryIpLockout = createLockout({
+    maxFails: Math.max(1, config.recoveryIpMax),
+    windowMs: recoveryWindowMs,
+    baseLockMs: recoveryWindowMs,
+  });
+
   const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 2 * 1024 * 1024, files: 1 },
+    limits: { fileSize: 2 * 1024 * 1024, files: 1, fields: 4, parts: 8 },
   });
 
   function audit(actorId, action, entityType, entityId, before, after) {
@@ -116,6 +154,30 @@ module.exports = function adminRoutes(db, config) {
       after ? JSON.stringify(after) : null,
       nowIso()
     );
+  }
+
+  /* Admin rows never leave the server with password/recovery hashes. */
+  function adminUser(row) {
+    return {
+      id: row.id,
+      email: row.email,
+      role: row.role,
+      active: !!row.active,
+      mfaEnrolled: !!row.mfa_enrolled,
+      hasRecovery: !!row.recovery_hash,
+      lastSignInAt: row.last_sign_in_at || null,
+      createdAt: row.created_at,
+    };
+  }
+
+  function getAdmin(id) {
+    return db.prepare("SELECT * FROM admin_user WHERE id = ?").get(id);
+  }
+
+  function otherActiveOwners(id) {
+    return db.prepare(
+      "SELECT COUNT(*) AS n FROM admin_user WHERE role = 'owner' AND active = 1 AND id <> ?"
+    ).get(id).n;
   }
 
   function getProduct(id) {
@@ -283,7 +345,7 @@ module.exports = function adminRoutes(db, config) {
     const body = req.body || {};
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
     const password = typeof body.password === "string" ? body.password : "";
-    if (!email || !password) {
+    if (!email || !password || email.length > 254 || password.length > 200) {
       return sendProblem(res, 400, "Invalid request", "Email and password are required.");
     }
 
@@ -297,7 +359,8 @@ module.exports = function adminRoutes(db, config) {
 
     purgeExpiredSessions(db);
     const user = db.prepare("SELECT * FROM admin_user WHERE lower(email) = lower(?)").get(email);
-    const valid = !!(user && user.active && verifyPassword(password, user.password_hash));
+    const passwordOk = verifyPassword(password, user ? user.password_hash : DUMMY_PASSWORD_HASH);
+    const valid = !!(user && user.active && passwordOk);
 
     if (!valid) {
       const ipJustLocked = lockoutIp.fail(ipKey);
@@ -317,8 +380,83 @@ module.exports = function adminRoutes(db, config) {
     const session = createSession(db, user.id, config, !!body.remember);
     setSessionCookies(res, req, config, session);
     res.json({
-      admin: { email: user.email, role: user.role, mfaEnrolled: !!user.mfa_enrolled },
+      admin: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        mfaEnrolled: !!user.mfa_enrolled,
+        hasRecovery: !!user.recovery_hash,
+      },
     });
+  });
+
+  /* ================= Password recovery =================
+     No email is sent. The admin proves ownership with the recovery
+     code saved from their account page (or issued by the CLI). The
+     code is single-use: a successful reset returns a fresh one and
+     revokes every session. */
+
+  router.post("/password/recover", authLimiter, function (req, res) {
+    const body = req.body || {};
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const recoveryCode = normalizeRecoveryCode(body.recoveryCode);
+    const password = typeof body.password === "string" ? body.password : "";
+
+    if (!email || recoveryCode.length !== 12 || emailProblem(email)) {
+      return sendProblem(res, 400, "Invalid request", "Enter your email and recovery code.");
+    }
+    const problem = passwordProblem(password);
+    if (problem) {
+      return sendProblem(res, 422, "Validation failed", "Choose a stronger password.", [
+        fieldError("password", problem),
+      ]);
+    }
+
+    const ipKey = "rec-ip:" + req.ip;
+    const accountKey = "rec-acct:" + email;
+    const locked = Math.max(
+      recoveryIpLockout.check(ipKey),
+      recoveryAccountLockout.check(accountKey)
+    );
+    if (locked > 0) {
+      res.setHeader("Retry-After", String(locked));
+      return sendProblem(
+        res, 429, "Too many attempts",
+        `Too many recovery attempts. Try again in ${locked} seconds.`
+      );
+    }
+
+    const user = db.prepare("SELECT * FROM admin_user WHERE lower(email) = lower(?)").get(email);
+    const codeOk = verifyRecoveryCode(user, recoveryCode);
+    if (!user || !user.active || !codeOk) {
+      const ipLock = recoveryIpLockout.fail(ipKey);
+      const accountLock = recoveryAccountLockout.fail(accountKey);
+      const justLocked = Math.max(ipLock, accountLock);
+      if (justLocked > 0) {
+        res.setHeader("Retry-After", String(justLocked));
+        return sendProblem(
+          res, 429, "Too many attempts",
+          `Too many recovery attempts. Try again in ${justLocked} seconds.`
+        );
+      }
+      return sendProblem(res, 401, "Recovery failed", "Incorrect email or recovery code.");
+    }
+
+    const newCode = transaction(db, function () {
+      setAdminPassword(db, user.id, password);
+      const code = setAdminRecoveryCode(db, user.id);
+      audit(user.id, "auth.password.recovered", "admin_user", user.id, null, {
+        via: "recovery_code",
+      });
+      return code;
+    });
+
+    recoveryIpLockout.success(ipKey);
+    recoveryAccountLockout.success(accountKey);
+    lockoutIp.success("ip:" + req.ip);
+    lockoutAccount.success("acct:" + email);
+
+    res.json({ ok: true, recoveryCode: newCode });
   });
 
   /* Everything below requires an authenticated session (PRD §10). */
@@ -331,6 +469,256 @@ module.exports = function adminRoutes(db, config) {
   router.delete("/session", requireCsrf, function (req, res) {
     destroySession(db, req.session.sessionId);
     clearSessionCookies(res);
+    res.status(204).end();
+  });
+
+  /* ================= Account (self-service) ================= */
+
+  router.post("/account", authLimiter, writeLimiter, requireCsrf, function (req, res) {
+    const body = req.body || {};
+    const currentPassword = typeof body.currentPassword === "string" ? body.currentPassword : "";
+    const newEmail = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const newPassword = typeof body.newPassword === "string" ? body.newPassword : "";
+
+    const user = getAdmin(req.admin.id);
+    if (!user) return sendProblem(res, 401, "Unauthorized", "Sign in again to continue.");
+
+    const wantsEmail = newEmail !== String(user.email).toLowerCase();
+    const wantsPassword = newPassword.length > 0;
+    if (!wantsEmail && !wantsPassword) {
+      return sendProblem(
+        res, 422, "Nothing to update",
+        "Change your email or choose a new password."
+      );
+    }
+    if (currentPassword.length > 200 || !verifyPassword(currentPassword, user.password_hash)) {
+      return sendProblem(res, 403, "Incorrect password", "Your current password is incorrect.", [
+        fieldError("currentPassword", "Your current password is incorrect."),
+      ]);
+    }
+
+    if (wantsEmail) {
+      const problem = emailProblem(newEmail);
+      if (problem) {
+        return sendProblem(res, 422, "Validation failed", problem, [
+          fieldError("email", problem),
+        ]);
+      }
+      const clash = db.prepare(
+        "SELECT id FROM admin_user WHERE lower(email) = lower(?) AND id <> ?"
+      ).get(newEmail, user.id);
+      if (clash) {
+        return sendProblem(res, 409, "Email already in use", "Another admin already uses that email.", [
+          fieldError("email", "Another admin already uses that email."),
+        ]);
+      }
+    }
+
+    if (wantsPassword) {
+      const problem = passwordProblem(newPassword);
+      if (problem) {
+        return sendProblem(res, 422, "Validation failed", "Choose a stronger password.", [
+          fieldError("password", problem),
+        ]);
+      }
+    }
+
+    transaction(db, function () {
+      if (wantsEmail) {
+        db.prepare("UPDATE admin_user SET email = ? WHERE id = ?").run(newEmail, user.id);
+        audit(user.id, "admin.email.changed", "admin_user", user.id,
+          { email: user.email }, { email: newEmail });
+      }
+      if (wantsPassword) {
+        setAdminPassword(db, user.id, newPassword);
+        audit(user.id, "admin.password.changed", "admin_user", user.id, null, {
+          via: "account",
+        });
+      }
+    });
+
+    /* A password change revoked every session including this one, so
+       issue a fresh session for the tab that made the change. */
+    if (wantsPassword) {
+      const session = createSession(db, user.id, config, false);
+      setSessionCookies(res, req, config, session);
+    }
+
+    res.json({
+      ok: true,
+      passwordChanged: wantsPassword,
+      admin: adminUser(getAdmin(user.id)),
+    });
+  });
+
+  router.post("/account/recovery", authLimiter, writeLimiter, requireCsrf, function (req, res) {
+    const body = req.body || {};
+    const currentPassword = typeof body.currentPassword === "string" ? body.currentPassword : "";
+    const user = getAdmin(req.admin.id);
+    if (!user) return sendProblem(res, 401, "Unauthorized", "Sign in again to continue.");
+    if (currentPassword.length > 200 || !verifyPassword(currentPassword, user.password_hash)) {
+      return sendProblem(res, 403, "Incorrect password", "Your current password is incorrect.", [
+        fieldError("currentPassword", "Your current password is incorrect."),
+      ]);
+    }
+
+    const code = setAdminRecoveryCode(db, user.id);
+    audit(user.id, "admin.recovery.generated", "admin_user", user.id, null, null);
+    res.json({ ok: true, recoveryCode: code });
+  });
+
+  /* ================= Admins (owner only) ================= */
+
+  router.get("/admins", readLimiter, requireOwner, function (req, res) {
+    const items = db.prepare(
+      `SELECT * FROM admin_user
+        ORDER BY CASE role WHEN 'owner' THEN 0 ELSE 1 END, created_at ASC`
+    ).all().map(adminUser);
+    res.json({ items });
+  });
+
+  router.post("/admins", writeLimiter, requireCsrf, requireOwner, function (req, res) {
+    const body = req.body || {};
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const password = typeof body.password === "string" ? body.password : "";
+    const role = body.role === undefined ? "editor" : body.role;
+
+    const emailErr = emailProblem(email);
+    if (emailErr) {
+      return sendProblem(res, 422, "Validation failed", emailErr, [fieldError("email", emailErr)]);
+    }
+    const pwErr = passwordProblem(password);
+    if (pwErr) {
+      return sendProblem(res, 422, "Validation failed", "Choose a stronger password.", [
+        fieldError("password", pwErr),
+      ]);
+    }
+    if (role !== "owner" && role !== "editor") {
+      return sendProblem(res, 422, "Validation failed", "Choose the owner or editor role.", [
+        fieldError("role", "Choose the owner or editor role."),
+      ]);
+    }
+
+    const clash = db.prepare("SELECT id FROM admin_user WHERE lower(email) = lower(?)").get(email);
+    if (clash) {
+      return sendProblem(res, 409, "Email already in use", "Another admin already uses that email.", [
+        fieldError("email", "Another admin already uses that email."),
+      ]);
+    }
+
+    const id = crypto.randomUUID();
+    const recoveryCode = transaction(db, function () {
+      db.prepare(
+        `INSERT INTO admin_user
+           (id, email, password_hash, role, active, mfa_enrolled, last_sign_in_at, created_at)
+         VALUES (?, ?, ?, ?, 1, 0, NULL, ?)`
+      ).run(id, email, hashPassword(password), role, nowIso());
+      const code = setAdminRecoveryCode(db, id);
+      audit(req.admin.id, "admin.created", "admin_user", id, null, { email, role });
+      return code;
+    });
+
+    res.status(201).json({ admin: adminUser(getAdmin(id)), recoveryCode });
+  });
+
+  router.patch("/admins/:id", writeLimiter, requireCsrf, requireOwner, function (req, res) {
+    const body = req.body || {};
+    const target = getAdmin(req.params.id);
+    if (!target) return sendProblem(res, 404, "Not found", "That admin account does not exist.");
+
+    const hasEmail = Object.prototype.hasOwnProperty.call(body, "email");
+    const hasRole = Object.prototype.hasOwnProperty.call(body, "role");
+    const hasActive = Object.prototype.hasOwnProperty.call(body, "active");
+    if (!hasEmail && !hasRole && !hasActive) {
+      return sendProblem(res, 422, "Nothing to update", "Change the email, role, or status.");
+    }
+
+    let email = target.email;
+    let role = target.role;
+    let active = !!target.active;
+
+    if (hasEmail) {
+      email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+      const problem = emailProblem(email);
+      if (problem) {
+        return sendProblem(res, 422, "Validation failed", problem, [fieldError("email", problem)]);
+      }
+      const clash = db.prepare(
+        "SELECT id FROM admin_user WHERE lower(email) = lower(?) AND id <> ?"
+      ).get(email, target.id);
+      if (clash) {
+        return sendProblem(res, 409, "Email already in use", "Another admin already uses that email.", [
+          fieldError("email", "Another admin already uses that email."),
+        ]);
+      }
+    }
+    if (hasRole) {
+      role = body.role;
+      if (role !== "owner" && role !== "editor") {
+        return sendProblem(res, 422, "Validation failed", "Choose the owner or editor role.", [
+          fieldError("role", "Choose the owner or editor role."),
+        ]);
+      }
+    }
+    if (hasActive) {
+      if (typeof body.active !== "boolean") {
+        return sendProblem(res, 422, "Validation failed", "Active must be true or false.", [
+          fieldError("active", "Active must be true or false."),
+        ]);
+      }
+      active = body.active;
+    }
+
+    if (target.id === req.admin.id && !active) {
+      return sendProblem(
+        res, 422, "Cannot deactivate yourself",
+        "You cannot deactivate the account you are signed in with."
+      );
+    }
+    if (target.role === "owner" && target.active && (role !== "owner" || !active)) {
+      if (otherActiveOwners(target.id) === 0) {
+        return sendProblem(
+          res, 422, "Owner required",
+          "Keep at least one active owner account."
+        );
+      }
+    }
+
+    transaction(db, function () {
+      db.prepare("UPDATE admin_user SET email = ?, role = ?, active = ? WHERE id = ?")
+        .run(email, role, active ? 1 : 0, target.id);
+      if (!active) {
+        db.prepare("DELETE FROM admin_session WHERE admin_id = ?").run(target.id);
+      }
+      audit(req.admin.id, "admin.updated", "admin_user", target.id,
+        { email: target.email, role: target.role, active: !!target.active },
+        { email, role, active });
+    });
+
+    res.json({ admin: adminUser(getAdmin(target.id)) });
+  });
+
+  router.delete("/admins/:id", writeLimiter, requireCsrf, requireOwner, function (req, res) {
+    const target = getAdmin(req.params.id);
+    if (!target) return sendProblem(res, 404, "Not found", "That admin account does not exist.");
+
+    if (target.id === req.admin.id) {
+      return sendProblem(
+        res, 422, "Cannot delete yourself",
+        "You cannot delete the account you are signed in with."
+      );
+    }
+    if (target.role === "owner" && target.active && otherActiveOwners(target.id) === 0) {
+      return sendProblem(res, 422, "Owner required", "Keep at least one active owner account.");
+    }
+
+    transaction(db, function () {
+      db.prepare("DELETE FROM admin_session WHERE admin_id = ?").run(target.id);
+      audit(req.admin.id, "admin.deleted", "admin_user", target.id,
+        { email: target.email, role: target.role, active: !!target.active }, null);
+      db.prepare("DELETE FROM admin_user WHERE id = ?").run(target.id);
+    });
+
     res.status(204).end();
   });
 
@@ -601,7 +989,7 @@ module.exports = function adminRoutes(db, config) {
 
   /* ================= Audit trail ================= */
 
-  router.get("/audit", readLimiter, function (req, res) {
+  router.get("/audit", readLimiter, requireOwner, function (req, res) {
     const where = [];
     const params = [];
     if (req.query.entity_type) {

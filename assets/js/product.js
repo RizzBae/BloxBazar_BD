@@ -155,7 +155,7 @@
     var idField =
       '<div class="order-id">' +
         '<label class="qty-label" for="rbx-id">' + T.t("prod.rboxId") + "</label>" +
-        '<input class="input" id="rbx-id" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="20" placeholder="' + T.esc(T.t("prod.rboxIdPh")) + '" value="' + T.esc(readId()) + '" aria-describedby="rbx-id-hint">' +
+        '<input class="input" id="rbx-id" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="20" value="' + T.esc(readId()) + '" aria-describedby="rbx-id-hint">' +
         '<p class="field-hint" id="rbx-id-hint">' + T.t("prod.rboxIdHint") + "</p>" +
       "</div>";
 
